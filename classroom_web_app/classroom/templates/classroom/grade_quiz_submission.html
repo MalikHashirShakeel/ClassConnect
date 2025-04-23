@@ -1,0 +1,14 @@
+{% for answer in answers %}
+    <div class="mb-6">
+        <p class="font-semibold text-gray-800">Q: {{ answer.question.question_text }}</p>
+        <p class="{% if answer.is_correct %}text-green-600{% else %}text-red-600{% endif %}">
+            Your answer: {{ answer.choice.choice_text }}
+            {% if answer.is_correct %}
+                (Correct)
+            {% else %}
+                (Incorrect)
+            {% endif %}
+        </p>
+    </div>
+{% endfor %}
+

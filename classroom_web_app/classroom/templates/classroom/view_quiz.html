@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ quiz.title }} - ClassConnect{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-r from-purple-50 to-white py-10 px-5">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-4xl font-bold text-custom-purple mb-8">{{ quiz.title }}</h1>
+
+        <div class="bg-white p-8 rounded-xl shadow-lg">
+            <p class="text-gray-600 mb-6">{{ quiz.description }}</p>
+
+            <div class="mt-6">
+                <p class="text-gray-500 text-sm">Time Limit: {{ quiz.time_limit_minutes }} min</p>
+                <p class="text-gray-500 text-sm">Start: {{ quiz.start_time|date:"M d, Y H:i" }}</p>
+                <p class="text-gray-500 text-sm">End: {{ quiz.end_time|date:"M d, Y H:i" }}</p>
+            </div>
+
+            {% if is_creator %}
+                <div class="flex flex-col sm:flex-row justify-end sm:space-x-4 mt-6 space-y-4 sm:space-y-0">
+                    <a href="{% url 'view_quiz_submissions' quiz.id %}"
+                       class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition shadow-md">
+                        View Submissions
+                    </a>
+                    <a href="{% url 'view_comments' 'quiz' quiz.id %}"
+                       class="bg-custom-purple text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition shadow-md">
+                        View Comments
+                    </a>
+                    {% if quiz.has_ended %}
+                        <a href="{% url 'download_quiz_results' quiz.id %}" 
+                        class="bg-custom-purple text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition shadow-md">
+                            📥 Download Results (CSV)
+                        </a>
+                    {% endif %}
+                </div>
+            {% else %}
+                <div class="mt-6">
+                    {% if submission and submission.is_submitted %}
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <p class="text-gray-700 font-semibold">You scored: {{ total_score|floatformat:2 }}%</p>
+                            <p class="text-gray-500 mt-2">You have already submitted this quiz.</p>
+                        </div>
+                        <a href="{% url 'view_comments' 'quiz' quiz.id %}"
+                           class="mt-4 inline-block bg-custom-purple text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition shadow-md">
+                            View Comments
+                        </a>
+                    {% elif quiz.is_active %}
+                        <a href="{% url 'submit_quiz' quiz.id %}"
+                           class="mt-6 inline-block bg-custom-purple text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition shadow-md">
+                            Take Quiz
+                        </a>
+                    {% else %}
+                        <p class="mt-6 text-red-500">This quiz is not currently active. Submissions are closed.</p>
+                        <a href="{% url 'view_comments' 'quiz' quiz.id %}"
+                           class="mt-4 inline-block bg-custom-purple text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition shadow-md">
+                            View Comments
+                        </a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

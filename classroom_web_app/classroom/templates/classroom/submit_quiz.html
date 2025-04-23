@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Submit Quiz - ClassConnect{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-r from-purple-50 to-white py-10 px-5">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-4xl font-bold text-custom-purple mb-8">{{ quiz.title }}</h1>
+
+        <div class="bg-white p-8 rounded-xl shadow-lg">
+            <form method="post">
+                {% csrf_token %}
+                {% for question in questions %}
+                    <div class="mb-6">
+                        <h3 class="font-semibold text-gray-800 mb-2">Q{{ forloop.counter }}: {{ question.question_text }}</h3>
+                        <div class="space-y-2">
+                            {% for choice in question.choices.all %}
+                                <label class="flex items-center space-x-2">
+                                    <input type="radio" name="question_{{ question.id }}" value="{{ choice.id }}" required>
+                                    <span>{{ choice.choice_text }}</span>
+                                </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endfor %}
+                <div class="flex justify-end">
+                    <button type="submit"
+                            class="bg-custom-purple text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition shadow-md">
+                        Submit Quiz
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

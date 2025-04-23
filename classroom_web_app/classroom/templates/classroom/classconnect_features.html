@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Features - ClassConnect{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-r from-purple-50 to-white py-16 px-6">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-4xl md:text-5xl font-bold text-custom-purple mb-12 text-center">ClassConnect Features</h1>
+
+        <div class="grid md:grid-cols-2 gap-8">
+            <!-- Feature Card -->
+            <div class="bg-white rounded-xl shadow-lg p-8 hover:shadow-2xl transition-all border-l-4 border-purple-400">
+                <h2 class="text-2xl font-bold text-custom-purple mb-4">Classroom Management</h2>
+                <p class="text-gray-600">Create, join, and manage classrooms with class codes. Control access, assignments, and participants with ease.</p>
+            </div>
+
+            <!-- Feature Card -->
+            <div class="bg-white rounded-xl shadow-lg p-8 hover:shadow-2xl transition-all border-l-4 border-purple-400">
+                <h2 class="text-2xl font-bold text-custom-purple mb-4">Smart Assignments</h2>
+                <p class="text-gray-600">Assign tasks, set due dates, attach files, and track submissions with real-time student progress tracking.</p>
+            </div>
+
+            <!-- Feature Card -->
+            <div class="bg-white rounded-xl shadow-lg p-8 hover:shadow-2xl transition-all border-l-4 border-purple-400">
+                <h2 class="text-2xl font-bold text-custom-purple mb-4">Timed Quizzes</h2>
+                <p class="text-gray-600">Create quizzes with customizable time limits, scoring, and automatic CSV export for performance analysis.</p>
+            </div>
+
+            <!-- Feature Card -->
+            <div class="bg-white rounded-xl shadow-lg p-8 hover:shadow-2xl transition-all border-l-4 border-purple-400">
+                <h2 class="text-2xl font-bold text-custom-purple mb-4">Announcements</h2>
+                <p class="text-gray-600">Communicate with your class instantly with announcements that support files, formatting, and visibility control.</p>
+            </div>
+
+            <!-- Feature Card -->
+            <div class="bg-white rounded-xl shadow-lg p-8 hover:shadow-2xl transition-all border-l-4 border-purple-400">
+                <h2 class="text-2xl font-bold text-custom-purple mb-4">Task Center</h2>
+                <p class="text-gray-600">Track your pending and missed tasks. Prioritized by urgency with color-coded indicators to keep you on track.</p>
+            </div>
+
+            <!-- Feature Card -->
+            <div class="bg-white rounded-xl shadow-lg p-8 hover:shadow-2xl transition-all border-l-4 border-purple-400">
+                <h2 class="text-2xl font-bold text-custom-purple mb-4">Student & Teacher Roles</h2>
+                <p class="text-gray-600">Role-based access and controls. Teachers create and evaluate, students submit and interact — clean and intuitive.</p>
+            </div>
+        </div>
+
+        <!-- CTA -->
+        <div class="mt-16 text-center">
+            <a href="{% url 'classroom_list' %}" class="inline-block bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-8 py-3 rounded-full shadow-md hover:shadow-xl hover:scale-105 transition-all font-semibold">
+                Back to Classrooms
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

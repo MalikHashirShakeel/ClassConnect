@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Add Questions - ClassConnect{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-r from-purple-50 to-white py-10 px-5">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-4xl font-bold text-custom-purple text-center mb-8">Add {{ quiz_info.number_of_questions }} Questions</h1>
+
+        <div class="bg-white p-8 rounded-xl shadow-lg">
+            <form method="post">
+                {% csrf_token %}
+                {{ formset.management_form }}
+
+                {% for form in formset %}
+                    <div class="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-lg shadow-sm">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-2">Question {{ forloop.counter }}</h3>
+
+                        <label class="block text-gray-700 font-medium">Question Text</label>
+                        {{ form.question_text }}
+
+                        <label class="block text-gray-700 font-medium mt-4">Points</label>
+                        {{ form.points }}
+
+                        <div class="mt-6">
+                            <label class="block text-gray-700 font-semibold mb-2">Choices</label>
+                            <div class="space-y-2">
+                                <div>
+                                    {{ form.choice_1 }}
+                                </div>
+                                <div>
+                                    {{ form.choice_2 }}
+                                </div>
+                                <div>
+                                    {{ form.choice_3 }}
+                                </div>
+                                <div>
+                                    {{ form.choice_4 }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <label class="block text-gray-700 font-semibold mb-2">Select Correct Option</label>
+                            {{ form.correct_choice }}
+                        </div>
+                    </div>
+                {% endfor %}
+
+                <div class="flex justify-end mt-6">
+                    <button type="submit" 
+                        class="bg-gradient-to-r from-custom-purple to-purple-600 text-white px-6 py-3 rounded-lg hover:from-purple-600 hover:to-custom-purple transition-all shadow-md">
+                        Create Quiz ✅
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,122 @@
+{% load static tailwind_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}My Django Project{% endblock %}</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Custom Tailwind Theme & Global Form Styles -->
+    <style type="text/tailwindcss">
+        @layer base {
+            input[type="text"],
+            input[type="email"],
+            input[type="password"],
+            input[type="number"],
+            input[type="date"],
+            select,
+            textarea {
+                @apply w-full px-4 py-2 rounded-lg border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-custom-purple focus:border-transparent transition-all;
+            }
+            label {
+                @apply block mb-2 font-medium text-gray-700;
+            }
+        }
+    </style>
+
+    <!-- Additional Styling -->
+    <style>
+        .bg-custom-purple {
+            background-color: #6D28D9;
+        }
+        .text-custom-purple {
+            color: #6D28D9;
+        }
+        .hover\:bg-custom-purple:hover {
+            background-color: #5B21B6;
+        }
+        .transition-all {
+            transition: all 0.3s ease-in-out;
+        }
+        .navbar-gradient {
+            background: linear-gradient(90deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.95) 100%);
+        }
+    </style>
+
+    <script src="https://kit.fontawesome.com/4d129158f7.js" crossorigin="anonymous"></script>
+    {% tailwind_css %}
+</head>
+<body class="bg-white text-gray-800">
+
+    <!-- Navbar -->
+    <nav class="bg-white shadow-md sticky top-0 z-50 border-b border-purple-100">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <!-- Logo -->
+                <a href="/" class="text-3xl font-extrabold bg-gradient-to-r from-purple-600 to-indigo-500 bg-clip-text text-transparent hover:brightness-110 transition-all duration-300">
+                    ClassConnect
+                </a>
+    
+                {% if user.is_authenticated %}
+                <!-- Nav Links -->
+                <div class="hidden md:flex items-center space-x-6">
+                    <a href="/classroom/" class="text-gray-700 font-medium px-4 py-2 rounded-full hover:bg-purple-100 hover:text-purple-700 transition-all duration-300">Classrooms</a>
+                    <a href="/classroom/tasks/" class="text-gray-700 font-medium px-4 py-2 rounded-full hover:bg-purple-100 hover:text-purple-700 transition-all duration-300">Tasks</a>
+                    <a href="/about-us/" class="text-gray-700 font-medium px-4 py-2 rounded-full hover:bg-purple-100 hover:text-purple-700 transition-all duration-300">About</a>
+                    <a href="/contact/" class="text-gray-700 font-medium px-4 py-2 rounded-full hover:bg-purple-100 hover:text-purple-700 transition-all duration-300">Contact</a>
+                    <a href="/classroom/invitations/" class="text-gray-700 font-medium px-4 py-2 rounded-full hover:bg-purple-100 hover:text-purple-700 transition-all duration-300">Invitations</a>
+                </div>
+                {% endif %}
+    
+                <!-- Auth Buttons -->
+                <div class="flex items-center space-x-4">
+                    {% if user.is_authenticated %}
+                        <a href="/users/logout/" class="bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-semibold px-5 py-2 rounded-full shadow hover:shadow-lg hover:brightness-110 transition-all duration-300">
+                            Logout
+                        </a>
+                    {% else %}
+                        <a href="/users/login/" class="text-gray-700 font-medium hover:text-purple-600 transition-all">Login</a>
+                        <a href="/users/register/" class="bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-semibold px-5 py-2 rounded-full shadow hover:shadow-lg hover:brightness-110 transition-all duration-300">
+                            Sign Up
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Messages -->
+    {% if messages %}
+        <div class="max-w-6xl mx-auto px-4 mt-4">
+            {% for message in messages %}
+                <div class="flex items-center justify-between px-6 py-3 rounded-lg shadow-md text-white 
+                            {% if message.tags == 'success' %}bg-green-500{% endif %}
+                            {% if message.tags == 'error' %}bg-red-500{% endif %}
+                            {% if message.tags == 'warning' %}bg-yellow-500{% endif %}
+                            relative transition-all hover:scale-102">
+                    <span>{{ message }}</span>
+                    <button onclick="this.parentElement.remove();" class="ml-4 text-xl hover:text-gray-300 transition-all">&times;</button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-8">
+        <div class="max-w-6xl mx-auto px-4 py-6">
+            <div class="text-center text-gray-600">
+                &copy; 2025 ClassConnect. All rights reserved.
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,32 @@
+# 🔹 Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# 🔹 Environment
+env/
+venv/
+*.env
+.env
+
+# 🔹 Databases & Migrations
+*.sqlite3
+*.db
+db.sqlite3
+migrations/
+
+# 🔹 Compiled files
+*.pyd
+*.swp
+
+# 🔹 IDEs & OS
+.vscode/
+.idea/
+.DS_Store
+
+# 🔹 Logs
+*.log
+
+# 🔹 Static & Media
+staticfiles/
+media/
