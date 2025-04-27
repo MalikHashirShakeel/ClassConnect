@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% block title %}Analytics - {{ quiz.title }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-r from-purple-50 to-white py-10 px-5">
+
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-4xl font-bold text-custom-purple mb-10 text-center">{{ quiz.title }} - Quiz Analytics</h1>
+
+        <!-- Quick Stats -->
+        <div class="grid md:grid-cols-3 gap-8 mb-12">
+            <div class="bg-white p-6 rounded-xl shadow-md text-center">
+                <h2 class="text-xl font-semibold text-purple-600 mb-2">Highest Score</h2>
+                <p class="text-3xl font-bold text-green-500">{{ highest_score }}%</p>
+                <p class="text-gray-500 mt-2 text-sm">Achieved by: {{ highest_scorers|join:", " }}</p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-md text-center">
+                <h2 class="text-xl font-semibold text-purple-600 mb-2">Lowest Score</h2>
+                <p class="text-3xl font-bold text-red-500">{{ lowest_score }}%</p>
+                <p class="text-gray-500 mt-2 text-sm">Achieved by: {{ lowest_scorers|join:", " }}</p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-md text-center">
+                <h2 class="text-xl font-semibold text-purple-600 mb-2">Class Average</h2>
+                <p class="text-3xl font-bold text-blue-500">{{ average_score }}%</p>
+            </div>
+        </div>
+
+        <!-- Students Attendance -->
+        <div class="grid md:grid-cols-2 gap-8 mb-12">
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <h2 class="text-2xl font-semibold text-custom-purple mb-4">Attendance Overview</h2>
+                <div class="relative w-full h-[300px]">
+                    <canvas id="attendancePie"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <h2 class="text-2xl font-semibold text-custom-purple mb-4">Absent Students</h2>
+                {% if absent_students %}
+                    <ul class="list-disc list-inside text-gray-700">
+                        {% for student in absent_students %}
+                            <li>{{ student }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-gray-500">No absent students. 🎉</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Score Distribution -->
+        <div class="bg-white p-6 rounded-xl shadow-md mb-12">
+            <h2 class="text-2xl font-semibold text-custom-purple mb-4">Score Distribution</h2>
+            <div class="relative w-full h-[400px]">
+                <canvas id="barChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Question Insights -->
+        <div class="grid md:grid-cols-2 gap-8 mb-12">
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <h2 class="text-2xl font-semibold text-custom-purple mb-4">Most Attempted Questions</h2>
+                {% if most_attempted_questions %}
+                    <ul class="list-disc list-inside text-gray-700">
+                        {% for question in most_attempted_questions %}
+                            <li>{{ question }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-gray-500">No attempts recorded yet.</p>
+                {% endif %}
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <h2 class="text-2xl font-semibold text-custom-purple mb-4">Least Attempted Questions</h2>
+                {% if least_attempted_questions %}
+                    <ul class="list-disc list-inside text-gray-700">
+                        {% for question in least_attempted_questions %}
+                            <li>{{ question }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-gray-500">No data available.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Incorrect Questions -->
+        <div class="bg-white p-6 rounded-xl shadow-md mb-12">
+            <h2 class="text-2xl font-semibold text-custom-purple mb-4">Most Incorrectly Answered Questions</h2>
+            {% if most_incorrect_questions %}
+                <ul class="list-disc list-inside text-gray-700">
+                    {% for question in most_incorrect_questions %}
+                        <li>{{ question }}</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-gray-500">No incorrect attempts recorded. 🚀</p>
+            {% endif %}
+        </div>
+
+        <div class="bg-white p-6 rounded-xl shadow-md mt-10">
+            <h2 class="text-2xl font-semibold text-custom-purple mb-6">🏆 Leaderboard</h2>
+        
+            {% if leaderboard %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-purple-200">
+                    <thead class="bg-purple-100">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">Rank</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">Student</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">Score (%)</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-purple-700 uppercase tracking-wider">Submission Time</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-purple-200">
+                        {% for student in leaderboard %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap font-bold text-gray-700">{{ forloop.counter }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">{{ student.student.username }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if student.total_score %}
+                                    {{ student.total_score|floatformat:2 }}%
+                                {% else %}
+                                    Not Graded Yet
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">{{ student.submitted_at|date:"M d, Y H:i" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+                <p class="text-gray-500">No submissions yet.</p>
+            {% endif %}
+        </div>
+
+        <div class="flex justify-center mt-10">
+            <a href="{% url 'download_quiz_analytics_pdf' quiz.id %}"
+               class="bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-5 py-2 rounded-full font-semibold shadow-md hover:shadow-xl transition-all duration-300 hover:scale-105">
+                📄 Download Analytics PDF
+            </a>
+        </div>
+
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const attendanceCtx = document.getElementById('attendancePie').getContext('2d');
+    new Chart(attendanceCtx, {
+        type: 'pie',
+        data: {
+            labels: ['Attempted', 'Absent'],
+            datasets: [{
+                data: [{{ attempted_students|length }}, {{ absent_students|length }}],
+                backgroundColor: ['#7C3AED', '#E5E7EB'],
+                hoverOffset: 10
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    const barCtx = document.getElementById('barChart').getContext('2d');
+    new Chart(barCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ distribution_labels|safe }},
+            datasets: [{
+                label: 'Number of Students',
+                data: {{ distribution_data|safe }},
+                backgroundColor: '#7C3AED',
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                tooltip: {
+                    backgroundColor: '#6D28D9',
+                    titleFont: {size: 16},
+                    bodyFont: {size: 14},
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + context.parsed.y;
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

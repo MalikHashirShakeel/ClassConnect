@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from .models import Classroom, Enrollment, Announcement, Assignment, Submission, Comment, Invitation, Choice, Quiz, QuizSubmission, Answer
+from .models import Classroom, Enrollment, Announcement, Assignment, Submission, Comment, Invitation, Choice, Quiz, QuizSubmission, Answer, Question
 from .forms import ClassroomForm, AnnouncementForm, AssignmentForm, QuestionForm, QuizInfoForm
 from django.forms import formset_factory
 from django.contrib import messages
@@ -9,8 +9,11 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import timedelta, datetime
 from django.utils.timezone import is_naive, make_aware
+from django.db.models import Count, Avg, Q, Max, Min
 import csv
 from django.http import HttpResponse
+from xhtml2pdf import pisa
+from django.template.loader import get_template
 
 #------------------------------------------------------------
 
@@ -882,3 +885,137 @@ def classconnect_features(request):
     return render(request, 'classroom/classconnect_features.html')
 
 #-------------------------------------------------------------
+
+def quiz_analytics(request, quiz_id):
+    quiz = get_object_or_404(Quiz, id=quiz_id)
+    classroom = quiz.classroom
+
+    # All enrolled students
+    enrolled_students = classroom.enrollment_set.all().values_list('student__username', flat=True)
+
+    # Attempted submissions
+    submissions = QuizSubmission.objects.filter(quiz=quiz, is_submitted=True)
+    attempted_students = submissions.values_list('student__username', flat=True)
+
+    # Students who did not attempt
+    absent_students = list(set(enrolled_students) - set(attempted_students))
+
+    # Scores
+    scores = [sub.total_score for sub in submissions]
+
+    highest_score = max(scores) if scores else 0
+    lowest_score = min(scores) if scores else 0
+    average_score = round(sum(scores) / len(enrolled_students), 2) if enrolled_students else 0.0
+
+    highest_scorers = submissions.filter(total_score=highest_score).values_list('student__username', flat=True)
+    lowest_scorers = submissions.filter(total_score=lowest_score).values_list('student__username', flat=True)
+
+    # Score Distribution
+    distribution_labels = []
+    distribution_data = []
+    if scores:
+        bins = [0, 50, 70, 85, 100]
+        labels = ['0-49%', '50-69%', '70-84%', '85-100%']
+        bin_counts = [0] * (len(bins) - 1)
+
+        for score in scores:
+            for i in range(len(bins) - 1):
+                if bins[i] <= score < bins[i + 1] or (i == len(bins) - 2 and score == 100):
+                    bin_counts[i] += 1
+                    break
+
+        distribution_labels = labels
+        distribution_data = bin_counts
+
+    # Most/Least Attempted Questions
+    question_attempts = Answer.objects.filter(submission__quiz=quiz).values('question').annotate(attempts=Count('id'))
+
+    most_attempted_questions = []
+    least_attempted_questions = []
+    most_incorrect_questions = []
+
+    if question_attempts:
+        max_attempt = max([q['attempts'] for q in question_attempts])
+        min_attempt = min([q['attempts'] for q in question_attempts])
+
+        for qa in question_attempts:
+            question = Question.objects.get(id=qa['question'])
+            if qa['attempts'] == max_attempt:
+                most_attempted_questions.append(question.question_text)
+            if qa['attempts'] == min_attempt:
+                least_attempted_questions.append(question.question_text)
+
+    # Most Incorrect Questions
+    incorrect_answers = Answer.objects.filter(submission__quiz=quiz, is_correct=False).values('question').annotate(wrong_count=Count('id'))
+    if incorrect_answers:
+        max_wrong = max([q['wrong_count'] for q in incorrect_answers])
+
+        for qa in incorrect_answers:
+            if qa['wrong_count'] == max_wrong:
+                question = Question.objects.get(id=qa['question'])
+                most_incorrect_questions.append(question.question_text)
+
+    
+    submissions = QuizSubmission.objects.filter(quiz=quiz, is_submitted=True).select_related('student')
+
+    leaderboard = submissions.order_by('-total_score')
+
+    context = {
+        'quiz': quiz,
+        'highest_score': round(highest_score, 2),
+        'lowest_score': round(lowest_score, 2),
+        'average_score': round(average_score, 2),
+        'highest_scorers': highest_scorers,
+        'lowest_scorers': lowest_scorers,
+        'absent_students': absent_students,
+        'attempted_students': list(attempted_students),
+        'distribution_labels': distribution_labels,
+        'distribution_data': distribution_data,
+        'most_attempted_questions': most_attempted_questions,
+        'least_attempted_questions': least_attempted_questions,
+        'most_incorrect_questions': most_incorrect_questions,
+        'leaderboard': leaderboard,
+    }
+
+    return render(request, 'classroom/quiz_analytics.html', context)
+
+
+#-------------------------------------------------------------
+
+
+def download_quiz_analytics_pdf(request, quiz_id):
+    quiz = Quiz.objects.get(pk=quiz_id)
+
+    submissions = quiz.submissions.filter(is_submitted=True)
+    highest_score = submissions.aggregate(Max('total_score'))['total_score__max'] or 0
+    lowest_score = submissions.aggregate(Min('total_score'))['total_score__min'] or 0
+    average_score = round(submissions.aggregate(Avg('total_score'))['total_score__avg'] or 0, 2)
+
+    leaderboard = submissions.order_by('-total_score', 'submitted_at')
+
+    all_students = Enrollment.objects.filter(classroom=quiz.classroom).values_list('student__username', flat=True)
+    attempted_students = submissions.values_list('student__username', flat=True)
+    absent_students = list(set(all_students) - set(attempted_students))
+
+    template_path = 'classroom/quiz_analytics_pdf.html'
+
+    context = {
+        'quiz': quiz,
+        'highest_score': highest_score,
+        'lowest_score': lowest_score,
+        'average_score': average_score,
+        'leaderboard': leaderboard,
+        'absent_students': absent_students,
+        'attempted_students': attempted_students,
+    }
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="quiz_{quiz_id}_analytics.pdf"'
+
+    template = get_template(template_path)
+    html = template.render(context)
+
+    pisa_status = pisa.CreatePDF(html, dest=response)
+    if pisa_status.err:
+        return HttpResponse('We had some errors with PDF generation <pre>' + html + '</pre>')
+    return response

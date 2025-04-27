@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Quiz Analytics PDF</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 30px; }
+        h1 { color: #6D28D9; text-align: center; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #cccccc; padding: 8px; text-align: center; }
+        th { background: #ede9fe; }
+    </style>
+</head>
+<body>
+    <h1>{{ quiz.title }} - Quiz Analytics</h1>
+
+    <h2>Quick Stats</h2>
+    <p><strong>Highest Score:</strong> {{ highest_score }}%</p>
+    <p><strong>Lowest Score:</strong> {{ lowest_score }}%</p>
+    <p><strong>Class Average:</strong> {{ average_score }}%</p>
+
+    <h2>Leaderboard</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Rank</th>
+                <th>Student</th>
+                <th>Score (%)</th>
+                <th>Submitted At</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for student in leaderboard %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ student.student.username }}</td>
+                <td>{{ student.total_score|floatformat:2 }}%</td>
+                <td>{{ student.submitted_at|date:"M d, Y H:i" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>Absent Students</h2>
+    <ul>
+        {% for student in absent_students %}
+            <li>{{ student }}</li>
+        {% empty %}
+            <li>No absent students</li>
+        {% endfor %}
+    </ul>
+
+</body>
+</html>

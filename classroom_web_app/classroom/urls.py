@@ -37,4 +37,6 @@ urlpatterns = [
     path('submission/quiz/<int:submission_id>/', views.grade_quiz_submission, name='grade_quiz_submission'),
     path('quiz/<int:quiz_id>/download/', views.download_quiz_results, name='download_quiz_results'),
     path('features/', views.classconnect_features, name='classconnect_features'),
+    path('quiz/<int:quiz_id>/analytics/', views.quiz_analytics, name='quiz_analytics'),
+    path('quiz/<int:quiz_id>/analytics/pdf/', views.download_quiz_analytics_pdf, name='download_quiz_analytics_pdf'),
 ]
