@@ -40,7 +40,10 @@ def create_classroom(request):
             classroom = form.save(commit=False)
             classroom.created_by = request.user
             classroom.save()
+            messages.success(request, 'Classroom created successfully!')
             return redirect('classroom_list')
+        else:
+            messages.error(request, 'Please correct the errors below.')
     else:
         form = ClassroomForm()
 
@@ -55,10 +58,13 @@ def create_classroom(request):
 def join_classroom(request):
     """View to join a classroom using a class code."""
     if request.method == 'POST':
-        class_code = request.POST.get('class_code')
+        class_code = request.POST.get('class_code', '').strip()
+        if not class_code:
+            messages.error(request, 'Please enter a class code.')
+            return render(request, 'classroom/join_classroom.html')
+
         try:
             classroom = Classroom.objects.get(class_code=class_code)
-            # Check if the user is already enrolled
             if not Enrollment.objects.filter(classroom=classroom, student=request.user).exists():
                 Enrollment.objects.create(classroom=classroom, student=request.user)
                 messages.success(request, f'You have successfully joined {classroom.name}!')
@@ -72,11 +78,15 @@ def join_classroom(request):
 
 #-------------------------------------------------------------
 
-@login_required
 def classroom_detail(request, classroom_id):
     """View to display classroom details and pending/missed tasks for students."""
     classroom = get_object_or_404(Classroom, id=classroom_id)
     is_creator = classroom.created_by == request.user
+
+    # Check if user is authorized
+    if not is_creator and not Enrollment.objects.filter(classroom=classroom, student=request.user).exists():
+        messages.error(request, 'You are not enrolled in this classroom.')
+        return redirect('classroom_list')
 
     # Get all announcements and assignments for the classroom
     announcements = Announcement.objects.filter(classroom=classroom).order_by('-created_at')
@@ -88,51 +98,60 @@ def classroom_detail(request, classroom_id):
     missed_tasks = []
     if not is_creator:
         now = timezone.now()
+        
+        # Check assignments
         for assignment in assignments:
-            if assignment.due_date > now:
-                time_left = assignment.due_date - now
-                urgency = (
-                    'red' if time_left <= timedelta(days=1) else
-                    'orange' if time_left <= timedelta(days=3) else
-                    'green'
-                )
-                pending_tasks.append({
-                    'id': assignment.id,
-                    'type': 'assignment',
-                    'title': assignment.title,
-                    'due_date': assignment.due_date,
-                    'urgency': urgency,
-                })
-            else:
-                missed_tasks.append({
-                    'id': assignment.id,
-                    'type': 'assignment',
-                    'title': assignment.title,
-                    'due_date': assignment.due_date,
-                })
+            # Check if student has already submitted this assignment
+            submitted = Submission.objects.filter(assignment=assignment, student=request.user).exists()
+            if not submitted:
+                if assignment.due_date > now:
+                    time_left = assignment.due_date - now
+                    urgency = (
+                        'red' if time_left <= timedelta(days=1) else
+                        'orange' if time_left <= timedelta(days=3) else
+                        'green'
+                    )
+                    pending_tasks.append({
+                        'id': assignment.id,
+                        'type': 'assignment',
+                        'title': assignment.title,
+                        'due_date': assignment.due_date,
+                        'urgency': urgency,
+                    })
+                else:
+                    missed_tasks.append({
+                        'id': assignment.id,
+                        'type': 'assignment',
+                        'title': assignment.title,
+                        'due_date': assignment.due_date,
+                    })
 
+        # Check quizzes
         for quiz in quizzes:
-            if quiz.end_time > now:
-                time_left = quiz.end_time - now
-                urgency = (
-                    'red' if time_left <= timedelta(days=1) else
-                    'orange' if time_left <= timedelta(days=3) else
-                    'green'
-                )
-                pending_tasks.append({
-                    'id': quiz.id,
-                    'type': 'quiz',
-                    'title': quiz.title,
-                    'due_date': quiz.end_time,
-                    'urgency': urgency,
-                })
-            else:
-                missed_tasks.append({
-                    'id': quiz.id,
-                    'type': 'quiz',
-                    'title': quiz.title,
-                    'due_date': quiz.end_time,
-                })
+            # Check if student has already submitted this quiz
+            submitted = QuizSubmission.objects.filter(quiz=quiz, student=request.user).exists()
+            if not submitted:
+                if quiz.end_time > now:
+                    time_left = quiz.end_time - now
+                    urgency = (
+                        'red' if time_left <= timedelta(days=1) else
+                        'orange' if time_left <= timedelta(days=3) else
+                        'green'
+                    )
+                    pending_tasks.append({
+                        'id': quiz.id,
+                        'type': 'quiz',
+                        'title': quiz.title,
+                        'due_date': quiz.end_time,
+                        'urgency': urgency,
+                    })
+                else:
+                    missed_tasks.append({
+                        'id': quiz.id,
+                        'type': 'quiz',
+                        'title': quiz.title,
+                        'due_date': quiz.end_time,
+                    })
 
     context = {
         'classroom': classroom,
@@ -141,10 +160,9 @@ def classroom_detail(request, classroom_id):
         'assignments': assignments,
         'pending_tasks': pending_tasks,
         'missed_tasks': missed_tasks,
-        'quizzes': quizzes,  # Added quizzes to the context
+        'quizzes': quizzes,
     }
     return render(request, 'classroom/classroom_detail.html', context)
-
 
 #------------------------------------------------------------
 
@@ -152,6 +170,11 @@ def classroom_detail(request, classroom_id):
 def add_announcement(request, classroom_id):
     """View to add an announcement to a classroom."""
     classroom = get_object_or_404(Classroom, id=classroom_id)
+
+    if classroom.created_by != request.user:
+        messages.error(request, 'Only the classroom creator can add announcements.')
+        return redirect('classroom_detail', classroom_id=classroom.id)
+
     if request.method == 'POST':
         form = AnnouncementForm(request.POST, request.FILES)
         if form.is_valid():
@@ -159,9 +182,13 @@ def add_announcement(request, classroom_id):
             announcement.classroom = classroom
             announcement.created_by = request.user
             announcement.save()
+            messages.success(request, 'Announcement added successfully!')
             return redirect('classroom_detail', classroom_id=classroom.id)
+        else:
+            messages.error(request, 'Please correct the errors below.')
     else:
         form = AnnouncementForm()
+
     context = {
         'form': form,
         'classroom': classroom,
@@ -176,6 +203,10 @@ def delete_announcement(request, announcement_id):
     announcement = get_object_or_404(Announcement, id=announcement_id)
     if announcement.created_by == request.user:
         announcement.delete()
+        messages.success(request, 'Announcement deleted successfully!')
+    else:
+        messages.error(request, 'You are not allowed to delete this announcement.')
+
     return redirect('classroom_detail', classroom_id=announcement.classroom.id)
 
 #-------------------------------------------------------------
@@ -184,6 +215,11 @@ def delete_announcement(request, announcement_id):
 def add_assignment(request, classroom_id):
     """View to add an assignment to a classroom."""
     classroom = get_object_or_404(Classroom, id=classroom_id)
+
+    if classroom.created_by != request.user:
+        messages.error(request, 'Only the classroom creator can add assignments.')
+        return redirect('classroom_detail', classroom_id=classroom.id)
+
     if request.method == 'POST':
         form = AssignmentForm(request.POST, request.FILES)
         if form.is_valid():
@@ -191,9 +227,13 @@ def add_assignment(request, classroom_id):
             assignment.classroom = classroom
             assignment.created_by = request.user
             assignment.save()
+            messages.success(request, 'Assignment added successfully!')
             return redirect('classroom_detail', classroom_id=classroom.id)
+        else:
+            messages.error(request, 'Please correct the errors below.')
     else:
         form = AssignmentForm()
+
     context = {
         'form': form,
         'classroom': classroom,
@@ -207,8 +247,13 @@ def delete_assignment(request, assignment_id):
     """View to delete an assignment."""
     assignment = get_object_or_404(Assignment, id=assignment_id)
     if assignment.created_by == request.user:
+        classroom_id = assignment.classroom.id if assignment.classroom else None
         assignment.delete()
-    return redirect('classroom_detail', classroom_id=assignment.classroom.id)
+        if classroom_id:
+            messages.success(request, "Assignment deleted successfully.")
+            return redirect('classroom_detail', classroom_id=classroom_id)
+    messages.error(request, "You are not authorized to delete this assignment.")
+    return redirect('classroom_list')  # fallback redirect if anything wrong
 
 #------------------------------------------------------------
 
@@ -216,7 +261,7 @@ def delete_assignment(request, assignment_id):
 def view_announcement(request, announcement_id):
     """View to display the full details of an announcement."""
     announcement = get_object_or_404(Announcement, id=announcement_id)
-    is_creator = announcement.created_by == request.user
+    is_creator = announcement.created_by == request.user if announcement.created_by else False
 
     context = {
         'announcement': announcement,
@@ -231,13 +276,17 @@ def edit_announcement(request, announcement_id):
     """View to edit an announcement."""
     announcement = get_object_or_404(Announcement, id=announcement_id)
     if announcement.created_by != request.user:
+        messages.error(request, "You are not authorized to edit this announcement.")
         return redirect('view_announcement', announcement_id=announcement.id)
 
     if request.method == 'POST':
         form = AnnouncementForm(request.POST, request.FILES, instance=announcement)
         if form.is_valid():
             form.save()
+            messages.success(request, "Announcement updated successfully.")
             return redirect('view_announcement', announcement_id=announcement.id)
+        else:
+            messages.error(request, "There was an error updating the announcement.")
     else:
         form = AnnouncementForm(instance=announcement)
 
@@ -253,7 +302,7 @@ def edit_announcement(request, announcement_id):
 def view_assignment(request, assignment_id):
     """View to display the full details of an assignment."""
     assignment = get_object_or_404(Assignment, id=assignment_id)
-    is_creator = assignment.created_by == request.user
+    is_creator = assignment.created_by == request.user if assignment.created_by else False
     is_due_date_passed = timezone.now() > assignment.due_date
     submission = Submission.objects.filter(assignment=assignment, student=request.user).first()
 
@@ -272,13 +321,17 @@ def edit_assignment(request, assignment_id):
     """View to edit an assignment."""
     assignment = get_object_or_404(Assignment, id=assignment_id)
     if assignment.created_by != request.user:
+        messages.error(request, "You are not authorized to edit this assignment.")
         return redirect('view_assignment', assignment_id=assignment.id)
 
     if request.method == 'POST':
         form = AssignmentForm(request.POST, request.FILES, instance=assignment)
         if form.is_valid():
             form.save()
+            messages.success(request, "Assignment updated successfully.")
             return redirect('view_assignment', assignment_id=assignment.id)
+        else:
+            messages.error(request, "There was an error updating the assignment.")
     else:
         form = AssignmentForm(instance=assignment)
 
@@ -302,7 +355,10 @@ def submit_assignment(request, assignment_id):
                 student=request.user,
                 file=file
             )
+            messages.success(request, "Assignment submitted successfully.")
             return redirect('view_assignment', assignment_id=assignment.id)
+        else:
+            messages.error(request, "Please upload a file to submit.")
     return render(request, 'classroom/submit_assignment.html', {'assignment': assignment})
 
 #------------------------------------------------------------
@@ -312,16 +368,19 @@ def create_quiz_info(request, classroom_id):
     classroom = get_object_or_404(Classroom, id=classroom_id)
 
     if classroom.created_by != request.user:
+        messages.error(request, "You are not authorized to create a quiz for this classroom.")
         return redirect('classroom_detail', classroom_id=classroom.id)
 
     if request.method == 'POST':
         form = QuizInfoForm(request.POST)
         if form.is_valid():
             data = form.cleaned_data
-            # Convert datetime to ISO string before storing in session
             data['start_time'] = data['start_time'].isoformat()
             request.session['quiz_info'] = data
+            messages.success(request, "Quiz information saved successfully. Now add questions.")
             return redirect('create_quiz_questions', classroom_id=classroom_id)
+        else:
+            messages.error(request, "Please correct the errors below.")
     else:
         form = QuizInfoForm()
 
@@ -330,7 +389,6 @@ def create_quiz_info(request, classroom_id):
         'classroom': classroom,
     })
 
-
 #------------------------------------------------------------
 
 @login_required
@@ -338,16 +396,16 @@ def create_quiz_questions(request, classroom_id):
     classroom = get_object_or_404(Classroom, id=classroom_id)
 
     if classroom.created_by != request.user:
-        return redirect('classroom_detail', classroom_id=classroom.id)
+        messages.error(request, "You are not authorized to create a quiz for this classroom.")
+        return redirect('classroom_detail', classroom_id=classroom_id)
 
     quiz_info = request.session.get('quiz_info')
     if not quiz_info:
+        messages.error(request, "Quiz information is missing. Please provide quiz details first.")
         return redirect('create_quiz_info', classroom_id=classroom_id)
 
-    # Convert string back to datetime
     quiz_info['start_time'] = datetime.fromisoformat(quiz_info['start_time'])
 
-    # Make datetime timezone-aware if needed
     start_time = quiz_info['start_time']
     if is_naive(start_time):
         start_time = make_aware(start_time)
@@ -371,10 +429,9 @@ def create_quiz_questions(request, classroom_id):
             for question_form in formset:
                 question = question_form.save(commit=False)
                 question.quiz = quiz
-                question.question_type = 'MCQ'  # hardcoded since it's MCQ-only
+                question.question_type = 'MCQ'
                 question.save()
 
-                # Create 4 choices
                 choices = [
                     question_form.cleaned_data['choice_1'],
                     question_form.cleaned_data['choice_2'],
@@ -391,7 +448,10 @@ def create_quiz_questions(request, classroom_id):
                     )
 
             del request.session['quiz_info']
+            messages.success(request, "Quiz created successfully!")
             return redirect('classroom_detail', classroom_id=classroom_id)
+        else:
+            messages.error(request, "Please correct the errors below.")
     else:
         formset = QuestionFormSet()
 
@@ -405,7 +465,7 @@ def create_quiz_questions(request, classroom_id):
 @login_required
 def view_quiz(request, quiz_id):
     quiz = get_object_or_404(Quiz, id=quiz_id)
-    is_creator = quiz.created_by == request.user
+    is_creator = quiz.created_by == request.user if quiz.created_by else False
     submission = None
     total_score = None
 
@@ -444,12 +504,17 @@ def submit_quiz(request, quiz_id):
 
         total_score = 0
         total_points = 0
+        missing_answers = False
 
         for question in quiz.questions.all():
             choice_id = request.POST.get(f"question_{question.id}")
             selected_choice = Choice.objects.filter(id=choice_id, question=question).first()
 
-            is_correct = selected_choice.is_correct if selected_choice else False
+            if not selected_choice:
+                missing_answers = True
+                continue
+
+            is_correct = selected_choice.is_correct
             if is_correct:
                 total_score += question.points
 
@@ -461,10 +526,12 @@ def submit_quiz(request, quiz_id):
             )
             total_points += question.points
 
-        # Calculate percentage
         submission.total_score = (total_score / total_points) * 100 if total_points else 0
         submission.is_submitted = True
         submission.save()
+
+        if missing_answers:
+            messages.warning(request, "Some questions were unanswered and marked incorrect.")
 
         messages.success(request, "Your quiz has been submitted!")
         return redirect('view_quiz', quiz_id=quiz.id)
@@ -481,6 +548,7 @@ def submit_quiz(request, quiz_id):
 def view_quiz_submissions(request, quiz_id):
     quiz = get_object_or_404(Quiz, id=quiz_id)
     if quiz.created_by != request.user:
+        messages.error(request, "You are not authorized to view submissions for this quiz.")
         return redirect('classroom_detail', classroom_id=quiz.classroom.id)
 
     submissions = QuizSubmission.objects.filter(quiz=quiz)
@@ -502,6 +570,7 @@ def grade_quiz_submission(request, submission_id):
     submission = get_object_or_404(QuizSubmission, id=submission_id)
     quiz = submission.quiz
     if request.user != quiz.created_by:
+        messages.error(request, "You are not authorized to grade this submission.")
         return redirect('view_quiz', quiz_id=quiz.id)
 
     answers = submission.answers.select_related('question', 'choice')
@@ -516,11 +585,13 @@ def grade_quiz_submission(request, submission_id):
 def delete_quiz(request, quiz_id):
     quiz = get_object_or_404(Quiz, id=quiz_id)
     if quiz.created_by != request.user:
-        return redirect('view_quiz', quiz.id)
+        messages.error(request, "You are not authorized to delete this quiz.")
+        return redirect('view_quiz', quiz_id=quiz.id)
 
     if request.method == 'POST':
         classroom_id = quiz.classroom.id
         quiz.delete()
+        messages.success(request, "Quiz deleted successfully.")
         return redirect('classroom_detail', classroom_id=classroom_id)
 
     return redirect('view_quiz', quiz.id)
@@ -532,6 +603,7 @@ def edit_submission(request, submission_id):
     """View to edit a submission."""
     submission = get_object_or_404(Submission, id=submission_id)
     if submission.student != request.user:
+        messages.error(request, "You are not authorized to edit this submission.")
         return redirect('view_assignment', assignment_id=submission.assignment.id)
 
     if request.method == 'POST':
@@ -539,7 +611,11 @@ def edit_submission(request, submission_id):
         if file:
             submission.file = file
             submission.save()
+            messages.success(request, "Submission updated successfully.")
             return redirect('view_assignment', assignment_id=submission.assignment.id)
+        else:
+            messages.error(request, "Please upload a file to update your submission.")
+
     return render(request, 'classroom/edit_submission.html', {'submission': submission})
 
 #------------------------------------------------------------
@@ -549,9 +625,11 @@ def cancel_submission(request, submission_id):
     """View to cancel a submission."""
     submission = get_object_or_404(Submission, id=submission_id)
     if submission.student != request.user:
+        messages.error(request, "You are not authorized to cancel this submission.")
         return redirect('view_assignment', assignment_id=submission.assignment.id)
 
     submission.delete()
+    messages.success(request, "Submission cancelled successfully.")
     return redirect('view_assignment', assignment_id=submission.assignment.id)
 
 #------------------------------------------------------------
@@ -561,12 +639,11 @@ def view_submissions(request, assignment_id):
     """View to display all submissions for an assignment and list students who haven't submitted."""
     assignment = get_object_or_404(Assignment, id=assignment_id)
     if assignment.created_by != request.user:
+        messages.error(request, "You are not authorized to view submissions for this assignment.")
         return redirect('view_assignment', assignment_id=assignment.id)
     
     submissions = Submission.objects.filter(assignment=assignment)
-
     enrolled_students = User.objects.filter(enrollment__classroom=assignment.classroom)
-
     submitted_students = submissions.values_list('student', flat=True)
     not_submitted_students = enrolled_students.exclude(id__in=submitted_students)
 
@@ -587,21 +664,26 @@ def view_comments(request, object_type, object_id):
     elif object_type == 'assignment':
         obj = get_object_or_404(Assignment, id=object_id)
         comments = Comment.objects.filter(assignment=obj, parent_comment__isnull=True)
-    elif object_type == 'quiz':  # ✅ ADD THIS!
+    elif object_type == 'quiz':
         obj = get_object_or_404(Quiz, id=object_id)
         comments = Comment.objects.filter(quiz=obj, parent_comment__isnull=True)
     else:
-        return redirect('classroom_list')  
+        messages.error(request, "Invalid object type for comments.")
+        return redirect('classroom_list')
 
     if request.method == 'POST':
-        content = request.POST.get('content')
-        Comment.objects.create(
-            content=content,
-            announcement=obj if object_type == 'announcement' else None,
-            assignment=obj if object_type == 'assignment' else None,
-            quiz=obj if object_type == 'quiz' else None,
-            created_by=request.user
-        )
+        content = request.POST.get('content', '').strip()
+        if content:
+            Comment.objects.create(
+                content=content,
+                announcement=obj if object_type == 'announcement' else None,
+                assignment=obj if object_type == 'assignment' else None,
+                quiz=obj if object_type == 'quiz' else None,
+                created_by=request.user
+            )
+            messages.success(request, "Comment posted successfully.")
+        else:
+            messages.error(request, "Comment cannot be empty.")
         return redirect('view_comments', object_type=object_type, object_id=object_id)
 
     return render(request, 'classroom/view_comments.html', {
@@ -618,17 +700,20 @@ def add_reply(request, comment_id):
     parent_comment = get_object_or_404(Comment, id=comment_id)
     
     if request.method == 'POST':
-        content = request.POST.get('content')
+        content = request.POST.get('content', '').strip()
         
-        # Create the reply, inheriting the object association from the parent
-        Comment.objects.create(
-            content=content,
-            announcement=parent_comment.announcement,
-            assignment=parent_comment.assignment,
-            quiz=parent_comment.quiz,  
-            created_by=request.user,
-            parent_comment=parent_comment
-        )
+        if content:
+            Comment.objects.create(
+                content=content,
+                announcement=parent_comment.announcement,
+                assignment=parent_comment.assignment,
+                quiz=parent_comment.quiz,
+                created_by=request.user,
+                parent_comment=parent_comment
+            )
+            messages.success(request, "Reply added successfully.")
+        else:
+            messages.error(request, "Reply content cannot be empty.")
 
         if parent_comment.announcement:
             return redirect('view_comments', object_type='announcement', object_id=parent_comment.announcement.id)
@@ -646,9 +731,9 @@ def view_students(request, classroom_id):
     """View to display all students enrolled in a classroom."""
     classroom = get_object_or_404(Classroom, id=classroom_id)
     if classroom.created_by != request.user:
+        messages.error(request, "You are not authorized to view students of this classroom.")
         return redirect('classroom_detail', classroom_id=classroom.id)
 
-    # Get all students enrolled in the classroom
     enrollments = Enrollment.objects.filter(classroom=classroom)
     students = [enrollment.student for enrollment in enrollments]
 
@@ -665,16 +750,17 @@ def delete_student(request, classroom_id, student_id):
     """View to delete a student from the classroom and all their related data."""
     classroom = get_object_or_404(Classroom, id=classroom_id)
     if classroom.created_by != request.user:
+        messages.error(request, "You are not authorized to remove students from this classroom.")
         return redirect('classroom_detail', classroom_id=classroom.id)
 
     student = get_object_or_404(User, id=student_id)
 
-    # Delete all related data for the student in this classroom
-    Enrollment.objects.filter(classroom=classroom, student=student).delete()  # Remove enrollment
-    Comment.objects.filter(created_by=student, announcement__classroom=classroom).delete()  # Delete comments on announcements
-    Comment.objects.filter(created_by=student, assignment__classroom=classroom).delete()  # Delete comments on assignments
-    Submission.objects.filter(student=student, assignment__classroom=classroom).delete()  # Delete assignment submissions
+    Enrollment.objects.filter(classroom=classroom, student=student).delete()
+    Comment.objects.filter(created_by=student, announcement__classroom=classroom).delete()
+    Comment.objects.filter(created_by=student, assignment__classroom=classroom).delete()
+    Submission.objects.filter(student=student, assignment__classroom=classroom).delete()
 
+    messages.success(request, f"{student.username} has been removed from the classroom.")
     return redirect('view_students', classroom_id=classroom.id)
 
 #-------------------------------------------------------------
@@ -684,27 +770,29 @@ def add_student(request, classroom_id):
     """View to send an invitation to a student by email."""
     classroom = get_object_or_404(Classroom, id=classroom_id)
     if classroom.created_by != request.user:
+        messages.error(request, "You are not authorized to add students to this classroom.")
         return redirect('classroom_detail', classroom_id=classroom.id)
 
     if request.method == 'POST':
-        email = request.POST.get('email')
-        try:
-            student = User.objects.get(email=email)
-            # Check if the student is already enrolled or invited
-            if Enrollment.objects.filter(classroom=classroom, student=student).exists():
-                messages.warning(request, f'{student.username} is already enrolled in this classroom.')
-            elif Invitation.objects.filter(classroom=classroom, student=student, is_accepted=False).exists():
-                messages.warning(request, f'{student.username} has already been invited to this classroom.')
-            else:
-                # Send an invitation
-                Invitation.objects.create(
-                    classroom=classroom,
-                    student=student,
-                    sent_by=request.user
-                )
-                messages.success(request, f'An invitation has been sent to {student.username}.')
-        except User.DoesNotExist:
-            messages.error(request, 'No user found with this email.')
+        email = request.POST.get('email', '').strip()
+        if not email:
+            messages.error(request, 'Please enter a valid email address.')
+        else:
+            try:
+                student = User.objects.get(email=email)
+                if Enrollment.objects.filter(classroom=classroom, student=student).exists():
+                    messages.warning(request, f'{student.username} is already enrolled.')
+                elif Invitation.objects.filter(classroom=classroom, student=student, is_accepted=False).exists():
+                    messages.warning(request, f'{student.username} has already been invited.')
+                else:
+                    Invitation.objects.create(
+                        classroom=classroom,
+                        student=student,
+                        sent_by=request.user
+                    )
+                    messages.success(request, f'An invitation has been sent to {student.username}.')
+            except User.DoesNotExist:
+                messages.error(request, 'No user found with this email.')
 
     return render(request, 'classroom/add_student.html', {'classroom': classroom})
 
@@ -715,12 +803,13 @@ def delete_classroom(request, classroom_id):
     """View to delete a classroom and all its related data."""
     classroom = get_object_or_404(Classroom, id=classroom_id)
     if classroom.created_by != request.user:
-        return redirect('classroom_list')  # Redirect if the user is not the creator
+        messages.error(request, "You are not authorized to delete this classroom.")
+        return redirect('classroom_list')
 
     if request.method == 'POST':
-        
         classroom.delete()
-        return redirect('classroom_list') 
+        messages.success(request, "Classroom deleted successfully.")
+        return redirect('classroom_list')
 
     return redirect('classroom_detail', classroom_id=classroom.id)
 
@@ -731,9 +820,9 @@ def leave_classroom(request, classroom_id):
     """View for a student to leave a classroom."""
     classroom = get_object_or_404(Classroom, id=classroom_id)
     if request.method == 'POST':
-        # Remove the student from the classroom
         Enrollment.objects.filter(classroom=classroom, student=request.user).delete()
-        return redirect('classroom_list')  # Redirect to the classroom list after leaving
+        messages.success(request, "You have left the classroom.")
+        return redirect('classroom_list')
 
     return redirect('classroom_detail', classroom_id=classroom.id)
 
@@ -750,57 +839,64 @@ def task_list(request):
     missed_tasks = []
     now = timezone.now()
 
-    # Process Assignments
     for assignment in assignments:
-        if assignment.due_date > now:
-            time_left = assignment.due_date - now
-            urgency = (
-                'red' if time_left <= timedelta(days=1)
-                else 'orange' if time_left <= timedelta(days=3)
-                else 'green'
-            )
-            pending_tasks.append({
-                'id': assignment.id,
-                'type': 'assignment',
-                'title': assignment.title,
-                'due_date': assignment.due_date,
-                'urgency': urgency,
-                'classroom': assignment.classroom.name,
-            })
-        else:
-            missed_tasks.append({
-                'id': assignment.id,
-                'type': 'assignment',
-                'title': assignment.title,
-                'due_date': assignment.due_date,
-                'classroom': assignment.classroom.name,
-            })
+        # Check if student has submitted this assignment
+        submitted = Submission.objects.filter(assignment=assignment, student=request.user).exists()
+        if not submitted:
+            if assignment.due_date > now:
+                time_left = assignment.due_date - now
+                urgency = (
+                    'red' if time_left <= timedelta(days=1)
+                    else 'orange' if time_left <= timedelta(days=3)
+                    else 'green'
+                )
+                pending_tasks.append({
+                    'id': assignment.id,
+                    'type': 'assignment',
+                    'title': assignment.title,
+                    'due_date': assignment.due_date,
+                    'urgency': urgency,
+                    'classroom': assignment.classroom.name,
+                })
+            else:
+                missed_tasks.append({
+                    'id': assignment.id,
+                    'type': 'assignment',
+                    'title': assignment.title,
+                    'due_date': assignment.due_date,
+                    'classroom': assignment.classroom.name,
+                })
 
-    # Process Quizzes
     for quiz in quizzes:
-        if quiz.end_time > now:
-            time_left = quiz.end_time - now
-            urgency = (
-                'red' if time_left <= timedelta(days=1)
-                else 'orange' if time_left <= timedelta(days=3)
-                else 'green'
-            )
-            pending_tasks.append({
-                'id': quiz.id,
-                'type': 'quiz',
-                'title': quiz.title,
-                'due_date': quiz.end_time,
-                'urgency': urgency,
-                'classroom': quiz.classroom.name,
-            })
-        else:
-            missed_tasks.append({
-                'id': quiz.id,
-                'type': 'quiz',
-                'title': quiz.title,
-                'due_date': quiz.end_time,
-                'classroom': quiz.classroom.name,
-            })
+        # Check if student has submitted this quiz
+        submitted = QuizSubmission.objects.filter(quiz=quiz, student=request.user).exists()
+        if not submitted:
+            if quiz.end_time > now:
+                time_left = quiz.end_time - now
+                urgency = (
+                    'red' if time_left <= timedelta(days=1)
+                    else 'orange' if time_left <= timedelta(days=3)
+                    else 'green'
+                )
+                pending_tasks.append({
+                    'id': quiz.id,
+                    'type': 'quiz',
+                    'title': quiz.title,
+                    'due_date': quiz.end_time,
+                    'urgency': urgency,
+                    'classroom': quiz.classroom.name,
+                })
+            else:
+                missed_tasks.append({
+                    'id': quiz.id,
+                    'type': 'quiz',
+                    'title': quiz.title,
+                    'due_date': quiz.end_time,
+                    'classroom': quiz.classroom.name,
+                })
+
+    if not pending_tasks and not missed_tasks:
+        messages.info(request, "You have no pending or missed tasks.")
 
     context = {
         'pending_tasks': pending_tasks,
@@ -815,15 +911,17 @@ def accept_invitation(request, invitation_id):
     """View to accept an invitation and join the classroom."""
     invitation = get_object_or_404(Invitation, id=invitation_id, student=request.user)
     if not invitation.is_accepted:
-        # Enroll the student in the classroom
-        Enrollment.objects.create(
-            classroom=invitation.classroom,
-            student=request.user,
-            enrolled_at=timezone.now()
-        )
-        invitation.is_accepted = True
-        invitation.save()
-        messages.success(request, f'You have successfully joined {invitation.classroom.name}!')
+        try:
+            Enrollment.objects.create(
+                classroom=invitation.classroom,
+                student=request.user,
+                enrolled_at=timezone.now()
+            )
+            invitation.is_accepted = True
+            invitation.save()
+            messages.success(request, f'You have successfully joined {invitation.classroom.name}!')
+        except Exception as e:
+            messages.error(request, 'An error occurred while accepting the invitation. Please try again.')
     else:
         messages.warning(request, 'This invitation has already been accepted.')
 
@@ -835,6 +933,10 @@ def accept_invitation(request, invitation_id):
 def invitations(request):
     """View to display pending invitations."""
     invitations = Invitation.objects.filter(student=request.user, is_accepted=False)
+
+    if not invitations.exists():
+        messages.info(request, "You have no pending invitations.")
+
     context = {
         'invitations': invitations,
     }
@@ -847,6 +949,7 @@ def download_quiz_results(request, quiz_id):
     quiz = get_object_or_404(Quiz, id=quiz_id)
 
     if request.user != quiz.classroom.created_by:
+        messages.error(request, "You are not authorized to download quiz results.")
         return redirect('view_quiz', quiz_id=quiz.id)
 
     # Prepare CSV response
@@ -856,8 +959,11 @@ def download_quiz_results(request, quiz_id):
     writer = csv.writer(response)
     writer.writerow(['Student Name', 'Email', 'Marks'])
 
-    # Get all enrolled students
     enrolled_students = Enrollment.objects.filter(classroom=quiz.classroom).select_related('student')
+
+    if not enrolled_students.exists():
+        messages.warning(request, "No students found for this quiz.")
+        return redirect('view_quiz', quiz_id=quiz.id)
 
     for enrollment in enrolled_students:
         student = enrollment.student
@@ -866,7 +972,7 @@ def download_quiz_results(request, quiz_id):
         if submission:
             try:
                 score = submission.get_score()
-            except:
+            except Exception as e:
                 score = 'N/A'
         else:
             score = 0  # No submission → 0 marks
@@ -886,21 +992,19 @@ def classconnect_features(request):
 
 #-------------------------------------------------------------
 
+@login_required
 def quiz_analytics(request, quiz_id):
     quiz = get_object_or_404(Quiz, id=quiz_id)
     classroom = quiz.classroom
 
-    # All enrolled students
-    enrolled_students = classroom.enrollment_set.all().values_list('student__username', flat=True)
+    if request.user != classroom.created_by:
+        messages.error(request, "You are not authorized to view this analytics.")
+        return redirect('classroom_detail', classroom_id=classroom.id)
 
-    # Attempted submissions
+    enrolled_students = classroom.enrollment_set.all().values_list('student__username', flat=True)
     submissions = QuizSubmission.objects.filter(quiz=quiz, is_submitted=True)
     attempted_students = submissions.values_list('student__username', flat=True)
-
-    # Students who did not attempt
     absent_students = list(set(enrolled_students) - set(attempted_students))
-
-    # Scores
     scores = [sub.total_score for sub in submissions]
 
     highest_score = max(scores) if scores else 0
@@ -910,7 +1014,6 @@ def quiz_analytics(request, quiz_id):
     highest_scorers = submissions.filter(total_score=highest_score).values_list('student__username', flat=True)
     lowest_scorers = submissions.filter(total_score=lowest_score).values_list('student__username', flat=True)
 
-    # Score Distribution
     distribution_labels = []
     distribution_data = []
     if scores:
@@ -927,37 +1030,38 @@ def quiz_analytics(request, quiz_id):
         distribution_labels = labels
         distribution_data = bin_counts
 
-    # Most/Least Attempted Questions
-    question_attempts = Answer.objects.filter(submission__quiz=quiz).values('question').annotate(attempts=Count('id'))
-
     most_attempted_questions = []
     least_attempted_questions = []
     most_incorrect_questions = []
 
+    question_attempts = Answer.objects.filter(submission__quiz=quiz).values('question').annotate(attempts=Count('id'))
     if question_attempts:
         max_attempt = max([q['attempts'] for q in question_attempts])
         min_attempt = min([q['attempts'] for q in question_attempts])
 
         for qa in question_attempts:
-            question = Question.objects.get(id=qa['question'])
-            if qa['attempts'] == max_attempt:
-                most_attempted_questions.append(question.question_text)
-            if qa['attempts'] == min_attempt:
-                least_attempted_questions.append(question.question_text)
+            try:
+                question = Question.objects.get(id=qa['question'])
+                if qa['attempts'] == max_attempt:
+                    most_attempted_questions.append(question.question_text)
+                if qa['attempts'] == min_attempt:
+                    least_attempted_questions.append(question.question_text)
+            except Question.DoesNotExist:
+                continue  # Skip if question missing
 
-    # Most Incorrect Questions
     incorrect_answers = Answer.objects.filter(submission__quiz=quiz, is_correct=False).values('question').annotate(wrong_count=Count('id'))
     if incorrect_answers:
         max_wrong = max([q['wrong_count'] for q in incorrect_answers])
 
         for qa in incorrect_answers:
-            if qa['wrong_count'] == max_wrong:
-                question = Question.objects.get(id=qa['question'])
-                most_incorrect_questions.append(question.question_text)
+            try:
+                if qa['wrong_count'] == max_wrong:
+                    question = Question.objects.get(id=qa['question'])
+                    most_incorrect_questions.append(question.question_text)
+            except Question.DoesNotExist:
+                continue  # Skip if question missing
 
-    
-    submissions = QuizSubmission.objects.filter(quiz=quiz, is_submitted=True).select_related('student')
-
+    submissions = submissions.select_related('student')
     leaderboard = submissions.order_by('-total_score')
 
     context = {
@@ -979,12 +1083,16 @@ def quiz_analytics(request, quiz_id):
 
     return render(request, 'classroom/quiz_analytics.html', context)
 
-
 #-------------------------------------------------------------
 
 
+@login_required
 def download_quiz_analytics_pdf(request, quiz_id):
-    quiz = Quiz.objects.get(pk=quiz_id)
+    quiz = get_object_or_404(Quiz, pk=quiz_id)
+
+    if request.user != quiz.classroom.created_by:
+        messages.error(request, "You are not authorized to download analytics.")
+        return redirect('view_quiz', quiz_id=quiz.id)
 
     submissions = quiz.submissions.filter(is_submitted=True)
     highest_score = submissions.aggregate(Max('total_score'))['total_score__max'] or 0
@@ -1017,5 +1125,7 @@ def download_quiz_analytics_pdf(request, quiz_id):
 
     pisa_status = pisa.CreatePDF(html, dest=response)
     if pisa_status.err:
-        return HttpResponse('We had some errors with PDF generation <pre>' + html + '</pre>')
+        messages.error(request, "An error occurred while generating the PDF.")
+        return redirect('quiz_analytics', quiz_id=quiz.id)
+
     return response

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Accept Terms - ClassConnect{% endblock %}
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-r from-purple-50 to-white p-4">
+    <div class="flex flex-col lg:flex-row bg-white shadow-2xl rounded-2xl overflow-hidden w-full max-w-6xl">
+        <!-- Left: Terms Content -->
+        <div class="w-full lg:w-1/2 p-10 overflow-y-scroll max-h-[600px]">
+            <h2 class="text-2xl font-bold text-purple-800 mb-4">Terms of Service</h2>
+            <p class="text-sm text-gray-700 mb-6 leading-relaxed">
+                [💡 Insert long, scrollable terms of service text here... for example purposes, use lorem ipsum or real content.]
+            </p>
+
+            <h2 class="text-2xl font-bold text-purple-800 mb-4">Privacy Policy</h2>
+            <p class="text-sm text-gray-700 mb-6 leading-relaxed">
+                [🔒 Insert privacy policy here... include data usage, cookies, retention, etc.]
+            </p>
+        </div>
+
+        <!-- Right: Agreement Checkboxes -->
+        <div class="w-full lg:w-1/2 p-10 flex flex-col justify-between">
+            <div>
+                <h2 class="text-3xl font-bold text-purple-900 mb-6">Complete Your Registration</h2>
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="p-3 mb-4 text-white rounded-lg {% if message.tags == 'error' %} bg-red-500 {% else %} bg-green-500 {% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <form method="POST" class="space-y-5">
+                    {% csrf_token %}
+                    <div>
+                        <label class="inline-flex items-center">
+                            <input type="checkbox" name="accept_terms" class="form-checkbox text-purple-600" required>
+                            <span class="ml-2 text-purple-800">I agree to the Terms of Service</span>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="inline-flex items-center">
+                            <input type="checkbox" name="accept_privacy" class="form-checkbox text-purple-600" required>
+                            <span class="ml-2 text-purple-800">I agree to the Privacy Policy</span>
+                        </label>
+                    </div>
+                    <button type="submit"
+                        class="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 py-3 rounded-lg hover:from-purple-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 shadow-lg hover:shadow-xl transition-all duration-300 font-medium">
+                        Agree & Complete Registration
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

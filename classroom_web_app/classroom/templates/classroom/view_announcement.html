@@ -10,8 +10,24 @@
             <p class="text-gray-600 mb-6">{{ announcement.content }}</p>
 
             {% if announcement.file %}
-                <a href="{{ announcement.file.url }}" 
-                   class="text-custom-purple hover:underline">Download File</a>
+                <!-- File Preview Section -->
+                <div class="mt-8">
+                    <h2 class="text-2xl font-semibold text-custom-purple mb-4">Attached File</h2>
+
+                    <div class="bg-gray-100 p-4 rounded-lg shadow-inner mb-4">
+                        <p class="text-gray-600 truncate">{{ announcement.file.name|slice:"30" }}</p>
+                        <div class="flex flex-col md:flex-row md:space-x-4 space-y-3 md:space-y-0 mt-4">
+                            <a href="{{ announcement.file.url }}" target="_blank"
+                               class="bg-white text-custom-purple border border-purple-300 font-semibold px-6 py-2 rounded-full shadow-md hover:bg-purple-50 hover:scale-105 transition-all text-center">
+                                👁️ View File
+                            </a>
+                            <a href="{{ announcement.file.url }}" download
+                               class="bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-semibold px-6 py-2 rounded-full shadow-md hover:shadow-lg hover:scale-105 transition-all text-center">
+                                📥 Download File
+                            </a>
+                        </div>
+                    </div>
+                </div>
             {% endif %}
 
             <div class="mt-6">
