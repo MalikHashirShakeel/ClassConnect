@@ -65,12 +65,21 @@ def join_classroom(request):
 
         try:
             classroom = Classroom.objects.get(class_code=class_code)
+
+            # ⛔ Prevent joining own classroom
+            if classroom.created_by == request.user:
+                messages.warning(request, 'You cannot join a classroom you created.')
+                return redirect('classroom_list')
+
+            # ✅ Proceed with enrollment
             if not Enrollment.objects.filter(classroom=classroom, student=request.user).exists():
                 Enrollment.objects.create(classroom=classroom, student=request.user)
                 messages.success(request, f'You have successfully joined {classroom.name}!')
             else:
                 messages.warning(request, 'You are already enrolled in this classroom.')
+
             return redirect('classroom_list')
+
         except Classroom.DoesNotExist:
             messages.error(request, 'Invalid class code. Please try again.')
 
