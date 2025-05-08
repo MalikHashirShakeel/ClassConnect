@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils.text import slugify
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -189,5 +190,85 @@ class Answer(models.Model):
 
     def __str__(self):
         return f"Answer for {self.question} by {self.submission.student.username}"
+    
+#------------------------------------------------------------
+
+class DiscussionThread(models.Model):
+    classroom = models.ForeignKey('Classroom', on_delete=models.CASCADE, related_name='threads')
+    title = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=100, unique=True, blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_pinned = models.BooleanField(default=False)
+    last_activity = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-is_pinned', '-last_activity']
+        unique_together = ['classroom', 'title']
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.title)[:100]
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.title} ({self.classroom.name})"
+    
+#------------------------------------------------------------
+
+class DiscussionMessage(models.Model):
+    thread = models.ForeignKey(DiscussionThread, on_delete=models.CASCADE, related_name='messages')
+    content = models.TextField()
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    parent_message = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='replies')
+    edited_at = models.DateTimeField(null=True, blank=True)
+    is_edited = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['created_at']
+    
+    @property
+    def was_edited(self):
+        return self.is_edited
+    
+    def save(self, *args, **kwargs):
+        if self.pk:  # Only for updates
+            self.is_edited = True
+            self.edited_at = timezone.now()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.created_by.username}: {self.content[:30]}"
+    
+#------------------------------------------------------------
+
+class MessageReaction(models.Model):
+    REACTION_MAP = {
+        'thumbs_up': '👍',
+        'heart': '❤️',
+        'laugh': '😂',
+        'surprise': '😮',
+        'sad': '😢',
+        'fire': '🔥'
+    }
+    
+    REVERSE_REACTION_MAP = {v: k for k, v in REACTION_MAP.items()}
+    
+    REACTION_CHOICES = [
+        (k, v) for k, v in REACTION_MAP.items()
+    ]
+    
+    message = models.ForeignKey(DiscussionMessage, on_delete=models.CASCADE, related_name='reactions')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    reaction = models.CharField(max_length=20, choices=REACTION_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('message', 'user')
+        
+    @property
+    def emoji(self):
+        return self.REACTION_MAP.get(self.reaction, '')
     
 #------------------------------------------------------------

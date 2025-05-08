@@ -1,6 +1,6 @@
 from django import forms
 from .models import Classroom, Announcement, Assignment
-from .models import Quiz, Question, Choice
+from .models import Quiz, Question, Choice, DiscussionThread, DiscussionMessage
 from django.forms import inlineformset_factory
 
 #------------------------------------------------------------
@@ -97,6 +97,33 @@ class ChoiceForm(forms.ModelForm):
     class Meta:
         model = Choice
         fields = ['choice_text', 'is_correct']
+
+#------------------------------------------------------------
+
+class DiscussionThreadForm(forms.ModelForm):
+    class Meta:
+        model = DiscussionThread
+        fields = ['title']
+        widgets = {
+            'title': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500',
+                'placeholder': 'Enter thread title...'
+            }),
+        }
+
+#------------------------------------------------------------
+
+class DiscussionMessageForm(forms.ModelForm):
+    class Meta:
+        model = DiscussionMessage
+        fields = ['content']
+        widgets = {
+            'content': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500',
+                'rows': 3,
+                'placeholder': 'Write your message here...'
+            }),
+        }
 
 #------------------------------------------------------------
 

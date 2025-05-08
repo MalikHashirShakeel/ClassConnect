@@ -39,4 +39,10 @@ urlpatterns = [
     path('features/', views.classconnect_features, name='classconnect_features'),
     path('quiz/<int:quiz_id>/analytics/', views.quiz_analytics, name='quiz_analytics'),
     path('quiz/<int:quiz_id>/analytics/pdf/', views.download_quiz_analytics_pdf, name='download_quiz_analytics_pdf'),
+    path('classroom/<int:classroom_id>/discussion/', views.discussion_forum, name='discussion_forum'),
+    path('discussion/thread/<int:thread_id>/', views.discussion_thread, name='discussion_thread'),
+    path('discussion/message/<int:message_id>/react/<str:reaction>/', views.add_message_reaction, name='add_message_reaction'),
+    path('discussion/message/<int:message_id>/reply/', views.reply_to_message, name='reply_to_message'),
+    path('discussion/thread/<int:thread_id>/toggle-pin/', views.toggle_pin_thread, name='toggle_pin_thread'),
+    path('discussion/thread/<int:thread_id>/delete/', views.delete_thread, name='delete_thread'),
 ]

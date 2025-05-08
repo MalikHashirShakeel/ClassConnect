@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import Classroom, Enrollment, Announcement, Assignment, Submission, Comment
-from .models import Quiz, Question, Choice, QuizSubmission, Answer
+from .models import Quiz, Question, Choice, QuizSubmission, Answer, DiscussionThread, DiscussionMessage, MessageReaction
 
 # Classroom Admin
 class ClassroomAdmin(admin.ModelAdmin):
@@ -52,3 +52,6 @@ admin.site.register(Question)
 admin.site.register(Choice)
 admin.site.register(QuizSubmission)
 admin.site.register(Answer)
+# admin.site.register(DiscussionThread)
+# admin.site.register(DiscussionMessage)
+# admin.site.register(MessageReaction)

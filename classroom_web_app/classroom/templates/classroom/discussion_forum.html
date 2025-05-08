@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% load custom_filters %}
+{% block title %}Discussion Forum - {{ classroom.name }} | ClassConnect{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-r from-purple-50 to-white py-10 px-5">
+    <div class="max-w-6xl mx-auto">
+        <!-- Back button and header -->
+        <div class="flex items-center mb-6">
+            <a href="{% url 'classroom_detail' classroom.id %}" class="mr-4 text-custom-purple hover:text-purple-700">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+            </a>
+            <h1 class="text-3xl font-bold text-gray-800">Discussion Forum</h1>
+        </div>
+
+        <!-- Create new thread card -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8 border border-purple-100">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Start a new discussion</h2>
+            <form method="post">
+                {% csrf_token %}
+                {{ form.title }}
+                <button type="submit" class="mt-4 bg-custom-purple text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition shadow-md">
+                    Create Thread
+                </button>
+            </form>
+        </div>
+
+        <!-- Threads list -->
+        <div class="space-y-6">
+            {% if threads %}
+                {% for thread in threads %}
+                    <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all overflow-hidden {% if thread.is_pinned %}border-l-4 border-custom-purple{% endif %} group">
+                        <div class="p-6">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center space-x-2">
+                                        {% if thread.is_pinned %}
+                                            <span class="text-custom-purple">📌</span>
+                                        {% endif %}
+                                        <h3 class="text-xl font-bold text-gray-800 truncate">
+                                            <a href="{% url 'discussion_thread' thread.id %}" class="hover:text-purple-700 hover:underline">{{ thread.title }}</a>
+                                        </h3>
+                                    </div>
+                                    <p class="text-sm text-gray-500 mt-1">
+                                        Started by 
+                                        <span class="font-medium {% if thread.created_by == classroom.created_by %}text-purple-600{% else %}text-gray-700{% endif %}">
+                                            {{ thread.created_by.get_full_name|default:thread.created_by.username }}
+                                            {% if thread.created_by == classroom.created_by %}
+                                                <span class="bg-purple-100 text-purple-800 text-xs px-2 py-0.5 rounded-full ml-1">Teacher</span>
+                                            {% endif %}
+                                        </span>
+                                        on {{ thread.created_at|date:"M d, Y H:i" }}
+                                    </p>
+                                </div>
+                                <div class="flex items-center space-x-3">
+                                    <span class="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full whitespace-nowrap">
+                                        {{ thread.messages.count }} message{{ thread.messages.count|pluralize }}
+                                    </span>
+                                    {% if request.user == thread.created_by or request.user == classroom.created_by %}
+                                    <button onclick="confirmThreadDelete('{% url 'delete_thread' thread.id %}', '{{ thread.title|escapejs }}')"
+                                            class="text-red-500 hover:text-red-700 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                            title="Delete thread">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-16 bg-white rounded-xl shadow">
+                    <p class="text-4xl mb-4">💬</p>
+                    <h3 class="text-xl font-bold text-gray-700">No discussions yet</h3>
+                    <p class="text-gray-500 mt-2">Be the first to start a discussion!</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal (hidden by default) -->
+<div id="deleteModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="bg-white rounded-xl shadow-xl p-6 max-w-md w-full mx-4">
+        <div class="text-center mb-6">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900">Delete Thread</h3>
+            <div class="mt-2">
+                <p class="text-sm text-gray-500">
+                    Are you sure you want to delete the thread "<span id="threadTitle" class="font-medium"></span>"?
+                    This action cannot be undone and will permanently delete all messages and replies.
+                </p>
+            </div>
+        </div>
+        <div class="flex justify-center space-x-4">
+            <button onclick="hideDeleteModal()" 
+                    class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition">
+                Cancel
+            </button>
+            <form id="deleteForm" method="POST" action="">
+                {% csrf_token %}
+                <button type="submit" 
+                        class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Delete Thread
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function confirmThreadDelete(url, title) {
+        const modal = document.getElementById('deleteModal');
+        const form = document.getElementById('deleteForm');
+        const titleSpan = document.getElementById('threadTitle');
+    
+        titleSpan.textContent = title;
+        form.action = url;
+    
+        // Show modal properly
+        modal.classList.remove('opacity-0', 'pointer-events-none');
+    }
+    
+    function hideDeleteModal() {
+        const modal = document.getElementById('deleteModal');
+        modal.classList.add('opacity-0', 'pointer-events-none');
+    }
+    
+</script>
+
+<style>
+    /* Delete button animation */
+    .delete-btn {
+        transition: all 0.2s ease;
+        opacity: 0;
+    }
+    
+    .thread-card:hover .delete-btn,
+    .delete-btn:focus {
+        opacity: 1;
+    }
+    
+    /* Modal animation */
+    #deleteModal {
+        transition: opacity 0.3s ease;
+    }
+    
+    #deleteModal > div {
+        transition: all 0.3s ease;
+        transform: translateY(-10px);
+    }
+    
+    #deleteModal:not(.hidden) > div {
+        transform: translateY(0);
+    }
+</style>
+{% endblock %}

@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from .models import Classroom, Enrollment, Announcement, Assignment, Submission, Comment, Invitation, Choice, Quiz, QuizSubmission, Answer, Question
-from .forms import ClassroomForm, AnnouncementForm, AssignmentForm, QuestionForm, QuizInfoForm
+from .models import Classroom, Enrollment, Announcement, Assignment, Submission, Comment, Invitation, Choice, Quiz, QuizSubmission, Answer, Question, DiscussionThread, DiscussionMessage, MessageReaction
+from .forms import ClassroomForm, AnnouncementForm, AssignmentForm, QuestionForm, QuizInfoForm, DiscussionThreadForm, DiscussionMessageForm
 from django.forms import formset_factory
 from django.contrib import messages
 from django.utils import timezone
@@ -14,6 +14,11 @@ import csv
 from django.http import HttpResponse
 from xhtml2pdf import pisa
 from django.template.loader import get_template
+from django.core.exceptions import PermissionDenied
+from django.utils.text import slugify
+from django.db import IntegrityError
+from django.urls import reverse
+from django.http import HttpResponseRedirect
 
 #------------------------------------------------------------
 
@@ -1138,3 +1143,214 @@ def download_quiz_analytics_pdf(request, quiz_id):
         return redirect('quiz_analytics', quiz_id=quiz.id)
 
     return response
+
+#-------------------------------------------------------------
+
+@login_required
+def discussion_forum(request, classroom_id):
+    classroom = get_object_or_404(Classroom, id=classroom_id)
+    is_creator = request.user == classroom.created_by
+    is_enrolled = Enrollment.objects.filter(classroom=classroom, student=request.user).exists()
+    
+    if not (is_creator or is_enrolled):
+        messages.error(request, "You don't have permission to access this forum")
+        return redirect('classroom_detail', classroom_id=classroom.id)
+    
+    if request.method == 'POST':
+        form = DiscussionThreadForm(request.POST)
+        if form.is_valid():
+            try:
+                thread = form.save(commit=False)
+                thread.classroom = classroom
+                thread.created_by = request.user
+                
+                if DiscussionThread.objects.filter(classroom=classroom, title__iexact=thread.title).exists():
+                    messages.warning(request, "A thread with this title already exists")
+                    return redirect('discussion_forum', classroom_id=classroom.id)
+                
+                thread.save()
+                messages.success(request, "Thread created successfully!")
+                return redirect('discussion_thread', thread_id=thread.id)
+            except IntegrityError:
+                messages.error(request, "Error creating thread. Please try again.")
+    else:
+        form = DiscussionThreadForm()
+    
+    threads = DiscussionThread.objects.filter(classroom=classroom).select_related('created_by')
+    
+    context = {
+        'classroom': classroom,
+        'threads': threads,
+        'form': form,
+        'is_creator': is_creator,
+    }
+    return render(request, 'classroom/discussion_forum.html', context)
+
+#-------------------------------------------------------------
+
+@login_required
+def discussion_thread(request, thread_id):
+    thread = get_object_or_404(
+        DiscussionThread.objects.select_related('classroom', 'created_by'),
+        id=thread_id
+    )
+    classroom = thread.classroom
+    is_creator = request.user == classroom.created_by
+    is_enrolled = Enrollment.objects.filter(classroom=classroom, student=request.user).exists()
+    
+    if not (is_creator or is_enrolled):
+        messages.error(request, "You don't have permission to view this thread")
+        return redirect('classroom:classroom_detail', classroom_id=classroom.id)
+    
+    if request.method == 'POST':
+        form = DiscussionMessageForm(request.POST)
+        if form.is_valid():
+            try:
+                recent_posts = DiscussionMessage.objects.filter(
+                    created_by=request.user,
+                    created_at__gte=timezone.now()-timezone.timedelta(minutes=1)
+                ).count()
+                
+                if recent_posts >= 3:
+                    messages.warning(request, "You're posting too quickly. Please wait a moment.")
+                    return redirect('discussion_thread', thread_id=thread.id)
+                
+                message = form.save(commit=False)
+                message.thread = thread
+                message.created_by = request.user
+                message.save()
+                
+                thread.last_activity = timezone.now()
+                thread.save()
+                
+                return redirect(f"{reverse('discussion_thread', args=[thread.id])}#message-{message.id}")
+            except IntegrityError:
+                messages.error(request, "Error posting message. Please try again.")
+    else:
+        form = DiscussionMessageForm()
+    
+    thread_messages = thread.messages.select_related(
+        'created_by', 'parent_message', 'parent_message__created_by'
+    ).prefetch_related(
+        'reactions', 'reactions__user'
+    ).order_by('created_at')
+    
+    context = {
+        'thread': thread,
+        'classroom': classroom,
+        'thread_messages': thread_messages,
+        'form': form,
+        'is_creator': is_creator,
+    }
+    return render(request, 'classroom/discussion_thread.html', context)
+
+#-------------------------------------------------------------
+
+@login_required
+def add_message_reaction(request, message_id, reaction):
+    message = get_object_or_404(DiscussionMessage, id=message_id)
+    classroom = message.thread.classroom
+    
+    if not Enrollment.objects.filter(classroom=classroom, student=request.user).exists():
+        messages.error(request, "You don't have permission to react")
+        return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('discussion_thread', args=[message.thread.id])))
+    
+    # Convert emoji to reaction key if needed
+    reaction_key = MessageReaction.REVERSE_REACTION_MAP.get(reaction, reaction)
+    
+    if reaction_key not in dict(MessageReaction.REACTION_CHOICES):
+        messages.error(request, "Invalid reaction")
+        return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('discussion_thread', args=[message.thread.id])))
+    
+    try:
+        existing = MessageReaction.objects.get(message=message, user=request.user)
+        if existing.reaction == reaction_key:
+            existing.delete()
+            # Don't show message for removing reactions
+        else:
+            existing.reaction = reaction_key
+            existing.save()
+            # Don't show message for updating reactions
+    except MessageReaction.DoesNotExist:
+        MessageReaction.objects.create(
+            message=message,
+            user=request.user,
+            reaction=reaction_key
+        )
+        # Don't show message for adding reactions
+    
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('discussion_thread', args=[message.thread.id])))
+
+#-------------------------------------------------------------
+
+@login_required
+def reply_to_message(request, message_id):
+    parent_message = get_object_or_404(DiscussionMessage, id=message_id)
+    classroom = parent_message.thread.classroom
+    is_creator = request.user == classroom.created_by
+    is_enrolled = Enrollment.objects.filter(classroom=classroom, student=request.user).exists()
+    
+    if not (is_creator or is_enrolled):
+        messages.error(request, "You don't have permission to reply")
+        return redirect('classroom_detail', classroom_id=classroom.id)
+    
+    if request.method == 'POST':
+        form = DiscussionMessageForm(request.POST)
+        if form.is_valid():
+            message = form.save(commit=False)
+            message.thread = parent_message.thread
+            message.created_by = request.user
+            message.parent_message = parent_message
+            message.save()
+            
+            # Update thread activity
+            parent_message.thread.last_activity = timezone.now()
+            parent_message.thread.save()
+            
+            return redirect(f"{reverse('discussion_thread', args=[parent_message.thread.id])}#message-{message.id}")
+    
+    return redirect('discussion_thread', thread_id=parent_message.thread.id)
+
+#-------------------------------------------------------------
+
+@login_required
+def toggle_pin_thread(request, thread_id):
+    thread = get_object_or_404(DiscussionThread, id=thread_id)
+    
+    if request.user != thread.classroom.created_by:
+        messages.error(request, "Only teachers can pin threads")
+        return redirect('discussion_thread', thread_id=thread.id)
+    
+    thread.is_pinned = not thread.is_pinned
+    thread.save()
+    
+    return redirect('discussion_forum', classroom_id=thread.classroom.id)
+
+#-------------------------------------------------------------
+
+@login_required
+def delete_thread(request, thread_id):
+    thread = get_object_or_404(DiscussionThread.objects.select_related('classroom', 'created_by'), id=thread_id)
+    classroom = thread.classroom
+    
+    # Check permissions
+    if not (request.user == thread.created_by or request.user == classroom.created_by):
+        messages.error(request, "You don't have permission to delete this thread")
+        return redirect('discussion_forum', classroom_id=classroom.id)
+    
+    if request.method == 'POST':
+        # Perform deletion
+        classroom_id = thread.classroom.id
+        thread_title = thread.title
+        thread.delete()
+        messages.success(request, f"Thread '{thread_title}' deleted successfully")
+        return redirect('discussion_forum', classroom_id=classroom_id)
+    
+    # If GET request, show confirmation template
+    context = {
+        'thread': thread,
+        'classroom': classroom,
+    }
+    return render(request, 'classroom/confirm_thread_delete.html', context)
+
+#-------------------------------------------------------------
