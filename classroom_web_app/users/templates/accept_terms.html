@@ -6,47 +6,149 @@
         <!-- Left: Terms Content -->
         <div class="w-full lg:w-1/2 p-10 overflow-y-scroll max-h-[600px]">
             <h2 class="text-2xl font-bold text-purple-800 mb-4">Terms of Service</h2>
-            <p class="text-sm text-gray-700 mb-6 leading-relaxed">
-                [💡 Insert long, scrollable terms of service text here... for example purposes, use lorem ipsum or real content.]
-            </p>
+            <div class="text-sm text-gray-700 mb-6 leading-relaxed space-y-4">
+                <p><strong>Last Updated:</strong> May 9, 2025</p>
+                
+                <h3 class="font-bold text-purple-700">1. Acceptance of Terms</h3>
+                <p>By accessing or using ClassConnect ("Service"), you agree to be bound by these Terms of Service. If you disagree with any part, you may not access the Service.</p>
+                
+                <h3 class="font-bold text-purple-700">2. User Responsibilities</h3>
+                <p>You agree to: (a) provide accurate registration information; (b) maintain security of your password; (c) be responsible for all activities under your account; (d) not use the Service for any illegal purpose.</p>
+                
+                <h3 class="font-bold text-purple-700">3. Academic Integrity</h3>
+                <p>ClassConnect promotes academic honesty. You agree not to use the Service to facilitate cheating, plagiarism, or other forms of academic misconduct.</p>
+                
+                <h3 class="font-bold text-purple-700">4. Content Ownership</h3>
+                <p>You retain rights to content you create, but grant ClassConnect a worldwide license to use, display, and distribute your content solely for operating the Service.</p>
+                
+                <h3 class="font-bold text-purple-700">5. Prohibited Conduct</h3>
+                <p>You may not: (a) harass others; (b) upload malicious software; (c) attempt unauthorized access; (d) overload our infrastructure; (e) impersonate others.</p>
+                
+                <h3 class="font-bold text-purple-700">6. Termination</h3>
+                <p>We may terminate or suspend access immediately for violation of these Terms. Upon termination, your right to use the Service ceases immediately.</p>
+                
+                <h3 class="font-bold text-purple-700">7. Modifications</h3>
+                <p>We reserve the right to modify these Terms at any time. Continued use after changes constitutes acceptance of the new Terms.</p>
+                
+                <h3 class="font-bold text-purple-700">8. Disclaimer</h3>
+                <p>The Service is provided "AS IS". We disclaim all warranties, express or implied, including merchantability, fitness for purpose, and non-infringement.</p>
+                
+                <h3 class="font-bold text-purple-700">9. Limitation of Liability</h3>
+                <p>ClassConnect shall not be liable for any indirect, incidental, special or consequential damages resulting from use or inability to use the Service.</p>
+            </div>
 
-            <h2 class="text-2xl font-bold text-purple-800 mb-4">Privacy Policy</h2>
-            <p class="text-sm text-gray-700 mb-6 leading-relaxed">
-                [🔒 Insert privacy policy here... include data usage, cookies, retention, etc.]
-            </p>
+            <h2 class="text-2xl font-bold text-purple-800 mb-4 mt-8">Privacy Policy</h2>
+            <div class="text-sm text-gray-700 mb-6 leading-relaxed space-y-4">
+                <p><strong>Last Updated:</strong> May 9, 2025</p>
+                
+                <h3 class="font-bold text-purple-700">1. Information We Collect</h3>
+                <p>We collect: (a) account registration details; (b) content you create; (c) usage data; (d) device information; (e) cookies and tracking technologies.</p>
+                
+                <h3 class="font-bold text-purple-700">2. How We Use Information</h3>
+                <p>We use your information to: (a) provide and improve the Service; (b) communicate with you; (c) ensure security; (d) analyze usage; (e) comply with legal obligations.</p>
+                
+                <h3 class="font-bold text-purple-700">3. Data Sharing</h3>
+                <p>We may share data with: (a) service providers under confidentiality agreements; (b) authorities if required by law; (c) affiliates for business purposes.</p>
+                
+                <h3 class="font-bold text-purple-700">4. Data Security</h3>
+                <p>We implement industry-standard measures to protect your data, including encryption and access controls. However, no system is 100% secure.</p>
+                
+                <h3 class="font-bold text-purple-700">5. Data Retention</h3>
+                <p>We retain personal data only as long as necessary for the purposes collected, or as required by law. You may request deletion of your account data.</p>
+                
+                <h3 class="font-bold text-purple-700">6. Children's Privacy</h3>
+                <p>The Service is not intended for children under 13. We do not knowingly collect data from children under 13 without parental consent.</p>
+                
+                <h3 class="font-bold text-purple-700">7. Cookies</h3>
+                <p>We use cookies to: (a) authenticate users; (b) remember preferences; (c) analyze traffic. You can control cookies through browser settings.</p>
+                
+                <h3 class="font-bold text-purple-700">8. Your Rights</h3>
+                <p>Depending on jurisdiction, you may have rights to: (a) access your data; (b) correct inaccuracies; (c) request deletion; (d) restrict processing; (e) data portability.</p>
+                
+                <h3 class="font-bold text-purple-700">9. International Transfers</h3>
+                <p>Data may be transferred to and processed in countries other than your own. We ensure appropriate safeguards are in place for such transfers.</p>
+                
+                <h3 class="font-bold text-purple-700">10. Changes to Policy</h3>
+                <p>We may update this policy. Material changes will be notified through the Service or via email. Continued use constitutes acceptance.</p>
+            </div>
         </div>
 
         <!-- Right: Agreement Checkboxes -->
         <div class="w-full lg:w-1/2 p-10 flex flex-col justify-between">
-            <div>
-                <h2 class="text-3xl font-bold text-purple-900 mb-6">Complete Your Registration</h2>
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="p-3 mb-4 text-white rounded-lg {% if message.tags == 'error' %} bg-red-500 {% else %} bg-green-500 {% endif %}">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                {% endif %}
+            <div class="space-y-8">
+                <div>
+                    <h2 class="text-3xl font-bold text-purple-900 mb-6">Complete Your Registration</h2>
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="p-3 mb-4 text-white rounded-lg {% if message.tags == 'error' %} bg-red-500 {% else %} bg-green-500 {% endif %}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
 
-                <form method="POST" class="space-y-5">
-                    {% csrf_token %}
-                    <div>
-                        <label class="inline-flex items-center">
-                            <input type="checkbox" name="accept_terms" class="form-checkbox text-purple-600" required>
-                            <span class="ml-2 text-purple-800">I agree to the Terms of Service</span>
-                        </label>
-                    </div>
-                    <div>
-                        <label class="inline-flex items-center">
-                            <input type="checkbox" name="accept_privacy" class="form-checkbox text-purple-600" required>
-                            <span class="ml-2 text-purple-800">I agree to the Privacy Policy</span>
-                        </label>
-                    </div>
-                    <button type="submit"
-                        class="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 py-3 rounded-lg hover:from-purple-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 shadow-lg hover:shadow-xl transition-all duration-300 font-medium">
-                        Agree & Complete Registration
-                    </button>
-                </form>
+                    <form method="POST" class="space-y-5">
+                        {% csrf_token %}
+                        <div>
+                            <label class="inline-flex items-center">
+                                <input type="checkbox" name="accept_terms" class="form-checkbox text-purple-600" required>
+                                <span class="ml-2 text-purple-800">I agree to the Terms of Service</span>
+                            </label>
+                        </div>
+                        <div>
+                            <label class="inline-flex items-center">
+                                <input type="checkbox" name="accept_privacy" class="form-checkbox text-purple-600" required>
+                                <span class="ml-2 text-purple-800">I agree to the Privacy Policy</span>
+                            </label>
+                        </div>
+                        <button type="submit"
+                            class="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 py-3 rounded-lg hover:from-purple-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 shadow-lg hover:shadow-xl transition-all duration-300 font-medium">
+                            Agree & Complete Registration
+                        </button>
+                    </form>
+                </div>
+
+                <div class="bg-purple-50 p-6 rounded-xl border border-purple-100">
+                    <h3 class="text-xl font-bold text-purple-800 mb-4">Security Best Practices</h3>
+                    <ul class="space-y-3 text-sm text-purple-900">
+                        <li class="flex items-start">
+                            <svg class="w-4 h-4 mt-0.5 mr-2 text-purple-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                            </svg>
+                            <span>Use a <strong>strong, unique password</strong> that you don't use elsewhere</span>
+                        </li>
+                        <li class="flex items-start">
+                            <svg class="w-4 h-4 mt-0.5 mr-2 text-purple-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                            </svg>
+                            <span>Enable <strong>two-factor authentication</strong> if available for extra security</span>
+                        </li>
+                        <li class="flex items-start">
+                            <svg class="w-4 h-4 mt-0.5 mr-2 text-purple-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                            </svg>
+                            <span>Always <strong>log out</strong> when using shared or public computers</span>
+                        </li>
+                        <li class="flex items-start">
+                            <svg class="w-4 h-4 mt-0.5 mr-2 text-purple-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                            </svg>
+                            <span>Be cautious of <strong>phishing attempts</strong> - we'll never ask for your password via email</span>
+                        </li>
+                        <li class="flex items-start">
+                            <svg class="w-4 h-4 mt-0.5 mr-2 text-purple-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                            </svg>
+                            <span>Keep your <strong>devices and browsers</strong> updated with the latest security patches</span>
+                        </li>
+                        <li class="flex items-start">
+                            <svg class="w-4 h-4 mt-0.5 mr-2 text-purple-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                            </svg>
+                            <span>Regularly <strong>review account activity</strong> and report any suspicious behavior</span>
+                        </li>
+                    </ul>
+                    <p class="mt-4 text-xs text-purple-700 italic">Following these practices helps keep your account and data secure.</p>
+                </div>
             </div>
         </div>
     </div>

@@ -1,24 +1,32 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
 from .models import Classroom, Enrollment, Announcement, Assignment, Submission, Comment, Invitation, Choice, Quiz, QuizSubmission, Answer, Question, DiscussionThread, DiscussionMessage, MessageReaction
 from .forms import ClassroomForm, AnnouncementForm, AssignmentForm, QuestionForm, QuizInfoForm, DiscussionThreadForm, DiscussionMessageForm
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.utils.timezone import is_naive, make_aware
+from django.views.decorators.csrf import csrf_exempt
 from django.forms import formset_factory
 from django.contrib import messages
 from django.utils import timezone
 from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import timedelta, datetime
-from django.utils.timezone import is_naive, make_aware
-from django.db.models import Count, Avg, Q, Max, Min
-import csv
+from django.db.models import Count, Avg, Max, Min
 from django.http import HttpResponse
 from xhtml2pdf import pisa
 from django.template.loader import get_template
-from django.core.exceptions import PermissionDenied
-from django.utils.text import slugify
 from django.db import IntegrityError
 from django.urls import reverse
 from django.http import HttpResponseRedirect
+from django.core.mail import send_mail
+from users.models import EmailVerificationCode
+from django.conf import settings
+from django.http import JsonResponse
+from django.contrib.auth import authenticate
+import random
+import json
+import csv
+import re
+
 
 #------------------------------------------------------------
 
@@ -277,9 +285,12 @@ def view_announcement(request, announcement_id):
     announcement = get_object_or_404(Announcement, id=announcement_id)
     is_creator = announcement.created_by == request.user if announcement.created_by else False
 
+    absolute_file_url = request.build_absolute_uri(announcement.file.url) if announcement.file else None
+
     context = {
         'announcement': announcement,
         'is_creator': is_creator,
+        'absolute_file_url': absolute_file_url,
     }
     return render(request, 'classroom/view_announcement.html', context)
 
@@ -316,6 +327,7 @@ def edit_announcement(request, announcement_id):
 def view_assignment(request, assignment_id):
     """View to display the full details of an assignment."""
     assignment = get_object_or_404(Assignment, id=assignment_id)
+    absolute_file_url = request.build_absolute_uri(assignment.file.url) if assignment.file else None
     is_creator = assignment.created_by == request.user if assignment.created_by else False
     is_due_date_passed = timezone.now() > assignment.due_date
     submission = Submission.objects.filter(assignment=assignment, student=request.user).first()
@@ -325,6 +337,7 @@ def view_assignment(request, assignment_id):
         'is_creator': is_creator,
         'is_due_date_passed': is_due_date_passed,
         'submission': submission,
+        'absolute_file_url': absolute_file_url,
     }
     return render(request, 'classroom/view_assignment.html', context)
 
@@ -1354,3 +1367,186 @@ def delete_thread(request, thread_id):
     return render(request, 'classroom/confirm_thread_delete.html', context)
 
 #-------------------------------------------------------------
+
+@login_required
+@csrf_exempt
+def verify_current_credentials(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            email = data.get('email')
+            password = data.get('password')
+            
+            user = authenticate(request, username=request.user.username, password=password)
+            
+            if user is not None and user.email == email:
+                return JsonResponse({'success': True})
+            else:
+                return JsonResponse({'success': False, 'error': 'Invalid credentials'}, status=400)
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
+
+#-------------------------------------------------------------
+
+@login_required
+@csrf_exempt
+def send_verification_code(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            new_username = data.get('new_username')
+            new_email = data.get('new_email')
+            new_password = data.get('new_password')
+            
+            # Validate new username
+            if not re.match(r'^[a-zA-Z0-9_]{4,}$', new_username):
+                return JsonResponse({'success': False, 'error': 'Invalid username format'}, status=400)
+                
+            # Validate new email
+            if not re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', new_email):
+                return JsonResponse({'success': False, 'error': 'Invalid email format'}, status=400)
+                
+            # Validate password strength
+            if (len(new_password) < 8 or 
+                not any(c.isupper() for c in new_password) or 
+                not any(c.islower() for c in new_password) or 
+                not any(c.isdigit() for c in new_password) or 
+                not any(c in "!@#$%^&*()-_=+" for c in new_password)):
+                return JsonResponse({'success': False, 'error': 'Password does not meet requirements'}, status=400)
+            
+            # Check if username or email already exists (excluding current user)
+            if User.objects.filter(username=new_username).exclude(pk=request.user.pk).exists():
+                return JsonResponse({'success': False, 'error': 'Username already taken'}, status=400)
+                
+            if User.objects.filter(email=new_email).exclude(pk=request.user.pk).exists():
+                return JsonResponse({'success': False, 'error': 'Email already in use'}, status=400)
+            
+            # Generate and save verification code
+            code = str(random.randint(100000, 999999))
+            EmailVerificationCode.objects.update_or_create(
+                email=new_email,
+                defaults={'code': code, 'created_at': timezone.now()}
+            )
+            
+            # Send verification email
+            subject = 'ClassConnect: Verify Your Email Change'
+            message = f'''
+            Hi {request.user.username},
+            
+            You've requested to change your ClassConnect account credentials. 
+            Please use the following verification code to confirm this change:
+            
+            Verification Code: {code}
+            
+            This code will expire in 10 minutes.
+            
+            If you didn't request this change, please contact support immediately.
+            
+            — ClassConnect Team
+            '''
+            from_email = settings.DEFAULT_FROM_EMAIL
+            recipient_list = [new_email]
+            
+            send_mail(subject, message, from_email, recipient_list, fail_silently=False)
+            
+            # Store new credentials in session temporarily
+            request.session['new_credentials'] = {
+                'username': new_username,
+                'email': new_email,
+                'password': new_password
+            }
+            
+            return JsonResponse({'success': True})
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
+
+#-------------------------------------------------------------
+
+@login_required
+@csrf_exempt
+def verify_update_credentials(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            input_code = data.get('code')
+            
+            if 'new_credentials' not in request.session:
+                return JsonResponse({'success': False, 'error': 'Session expired'}, status=400)
+                
+            new_credentials = request.session['new_credentials']
+            new_email = new_credentials['email']
+            
+            try:
+                verification = EmailVerificationCode.objects.get(email=new_email)
+            except EmailVerificationCode.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Verification not found'}, status=400)
+                
+            if verification.is_expired():
+                return JsonResponse({'success': False, 'error': 'Verification code expired'}, status=400)
+                
+            if str(verification.code) != input_code:
+                return JsonResponse({'success': False, 'error': 'Invalid verification code'}, status=400)
+            
+            # Update user credentials
+            user = request.user
+            user.username = new_credentials['username']
+            user.email = new_credentials['email']
+            user.set_password(new_credentials['password'])
+            user.save()
+            
+            # Clean up
+            verification.delete()
+            del request.session['new_credentials']
+            
+            return JsonResponse({'success': True})
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
+
+#-------------------------------------------------------------
+
+@login_required
+@csrf_exempt
+def resend_verification_code(request):
+    if request.method == 'POST':
+        try:
+            if 'new_credentials' not in request.session:
+                return JsonResponse({'success': False, 'error': 'Session expired'}, status=400)
+                
+            new_credentials = request.session['new_credentials']
+            new_email = new_credentials['email']
+            
+            # Generate new code
+            code = str(random.randint(100000, 999999))
+            EmailVerificationCode.objects.update_or_create(
+                email=new_email,
+                defaults={'code': code, 'created_at': timezone.now()}
+            )
+            
+            # Send verification email
+            subject = 'ClassConnect: New Verification Code'
+            message = f'''
+            Hi {request.user.username},
+            
+            Here's your new verification code for changing your ClassConnect account credentials:
+            
+            Verification Code: {code}
+            
+            This code will expire in 10 minutes.
+            
+            — ClassConnect Team
+            '''
+            from_email = settings.DEFAULT_FROM_EMAIL
+            recipient_list = [new_email]
+            
+            send_mail(subject, message, from_email, recipient_list, fail_silently=False)
+            
+            return JsonResponse({'success': True})
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)

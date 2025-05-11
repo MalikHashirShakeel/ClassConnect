@@ -12,6 +12,9 @@
             {% if submissions %}
                 <div class="grid md:grid-cols-2 gap-6">
                     {% for submission in submissions %}
+                        {% with submission.file.name|lower as filename %}
+                        {% with filename|slice:"-5:" as ext_5 %}
+                        {% with filename|slice:"-4:" as ext_4 %}
                         <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-2xl transition-all">
                             <h3 class="text-xl font-bold text-gray-800 mb-2">{{ submission.student.username }}</h3>
                             <p class="text-gray-600 mb-4">Submitted on {{ submission.submitted_at|date:"M d, Y H:i" }}</p>
@@ -21,13 +24,18 @@
                                    class="bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-semibold px-6 py-2 rounded-full shadow-md hover:shadow-lg hover:scale-105 transition-all text-center">
                                     📥 Download Submission
                                 </a>
+
+                                {% if ext_4 == ".pdf" or ext_4 == ".doc" or ext_5 == ".docx" or ext_4 == ".ppt" or ext_5 == ".pptx" or ext_4 == ".xls" or ext_5 == ".xlsx" %}
                                 <a href="{{ submission.file.url }}" target="_blank"
                                    class="bg-white text-custom-purple border border-purple-300 font-semibold px-6 py-2 rounded-full shadow-md hover:bg-purple-50 hover:scale-105 transition-all text-center">
                                     👁️ View Submission
                                 </a>
+                                {% endif %}
                             </div>
-
                         </div>
+                        {% endwith %}
+                        {% endwith %}
+                        {% endwith %}
                     {% endfor %}
                 </div>
             {% else %}

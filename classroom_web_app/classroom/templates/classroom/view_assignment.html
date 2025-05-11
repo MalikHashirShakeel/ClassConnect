@@ -10,24 +10,52 @@
             <p class="text-gray-600 mb-6">{{ assignment.description }}</p>
 
             {% if assignment.file %}
+            {% with assignment.file.name|lower as filename %}
+            {% with filename|slice:"-5:" as ext_5 %}
+            {% with filename|slice:"-4:" as ext_4 %}
             <div class="flex flex-col md:flex-row md:items-center md:justify-between bg-purple-50 border border-purple-100 rounded-lg p-4 mb-6 shadow-sm">
-                <!-- Small Preview Area -->
+
+                <!-- Conditional Preview Area -->
                 <div class="w-full md:w-2/3 mb-4 md:mb-0">
-                    <iframe src="{{ assignment.file.url }}" class="w-full h-48 rounded-lg shadow-sm" style="border: 1px solid #ddd;"></iframe>
+                    {% if ext_4 == ".pdf" %}
+                        <iframe src="{{ assignment.file.url }}" class="w-full h-48 rounded-lg shadow-sm" style="border: 1px solid #ddd;"></iframe>
+                    {% elif ext_5 == ".docx" or ext_4 == ".doc" or ext_5 == ".pptx" or ext_4 == ".ppt" or ext_5 == ".xlsx" or ext_4 == ".xls" %}
+                        <iframe src="https://docs.google.com/gview?url={{ absolute_file_url }}&embedded=true"
+                                class="w-full h-48 rounded-lg shadow-sm" style="border: 1px solid #ddd;"></iframe>
+                    {% else %}
+                        <div class="w-full h-48 rounded-lg shadow-inner flex items-center justify-center bg-gray-100 text-gray-500 border border-dashed border-gray-300">
+                            ❗ Preview not available for this file type.
+                        </div>
+                    {% endif %}
                 </div>
 
-                <!-- Buttons -->
+                <!-- Action Buttons -->
                 <div class="flex flex-col items-center space-y-4 md:space-y-2">
                     <a href="{{ assignment.file.url }}" download
                        class="bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-semibold px-6 py-2 rounded-full shadow-md hover:shadow-lg hover:scale-105 transition-all">
                         📥 Download Assignment
                     </a>
-                    <a href="{{ assignment.file.url }}" target="_blank"
-                       class="bg-white text-custom-purple border border-purple-300 font-semibold px-6 py-2 rounded-full shadow-md hover:bg-purple-50 hover:scale-105 transition-all">
-                        👁️ View Full Assignment
-                    </a>
+
+                    {% if ext_4 == ".pdf" %}
+                        <a href="{{ assignment.file.url }}" target="_blank"
+                           class="bg-white text-custom-purple border border-purple-300 font-semibold px-6 py-2 rounded-full shadow-md hover:bg-purple-50 hover:scale-105 transition-all">
+                            👁️ View Full Assignment
+                        </a>
+                    {% elif ext_4 == ".doc" or ext_5 == ".docx" or ext_4 == ".ppt" or ext_5 == ".pptx" or ext_4 == ".xls" or ext_5 == ".xlsx" %}
+                        <a href="https://docs.google.com/gview?url={{ absolute_file_url }}&embedded=true" target="_blank"
+                           class="bg-white text-custom-purple border border-purple-300 font-semibold px-6 py-2 rounded-full shadow-md hover:bg-purple-50 hover:scale-105 transition-all">
+                            👁️ View Full Assignment
+                        </a>
+                    {% else %}
+                        <div class="text-sm text-red-500 text-center">
+                            👎 Viewing not supported for this file type.
+                        </div>
+                    {% endif %}
                 </div>
             </div>
+            {% endwith %}
+            {% endwith %}
+            {% endwith %}
             {% endif %}
 
             <div class="mt-6">
@@ -76,7 +104,7 @@
                     {% endif %}
                 </div>
             {% endif %}
-            
+
             <!-- View Comments Button -->
             <div class="mt-6">
                 <a href="{% url 'view_comments' 'assignment' assignment.id %}" 

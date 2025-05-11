@@ -6,8 +6,20 @@
     <div class="max-w-6xl mx-auto">
         <!-- Classroom Header -->
         <div class="flex justify-between items-center mb-8">
-            <h1 class="text-4xl font-bold text-custom-purple">{{ classroom.name }}</h1>
-            <p class="text-gray-600">Class Code: <span class="font-mono">{{ classroom.class_code }}</span></p>
+            <!-- Back Button and Heading -->
+            <div class="flex items-center space-x-4">
+                <a href="{% url 'classroom_list' %}" class="text-custom-purple hover:text-purple-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                </a>
+                <h1 class="text-4xl font-bold text-custom-purple">{{ classroom.name }}</h1>
+            </div>
+
+            <!-- Class Code -->
+            <p class="text-gray-600">
+                Class Code: <span class="font-mono">{{ classroom.class_code }}</span>
+            </p>
         </div>
 
         <!-- Category Filter Tabs -->

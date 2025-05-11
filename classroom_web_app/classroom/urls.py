@@ -45,4 +45,8 @@ urlpatterns = [
     path('discussion/message/<int:message_id>/reply/', views.reply_to_message, name='reply_to_message'),
     path('discussion/thread/<int:thread_id>/toggle-pin/', views.toggle_pin_thread, name='toggle_pin_thread'),
     path('discussion/thread/<int:thread_id>/delete/', views.delete_thread, name='delete_thread'),
+    path('change-credentials/verify/', views.verify_current_credentials, name='verify_current_credentials'),
+    path('change-credentials/send-code/', views.send_verification_code, name='send_verification_code'),
+    path('change-credentials/verify-code/', views.verify_update_credentials, name='verify_update_credentials'),
+    path('change-credentials/resend-code/', views.resend_verification_code, name='resend_verification_code'),
 ]

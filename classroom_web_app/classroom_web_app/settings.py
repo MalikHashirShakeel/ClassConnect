@@ -138,9 +138,12 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# This is optional unless you have global static assets outside apps
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'about_us/static'), 
+    # os.path.join(BASE_DIR, 'static'),  # Optional global static directory
 ]
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # for collectstatic (production)
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

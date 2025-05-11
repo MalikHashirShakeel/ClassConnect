@@ -9,14 +9,27 @@
         <div class="bg-white p-8 rounded-xl shadow-lg">
             <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
-                {{ form.as_p }}
+                <div class="space-y-4">
+                    <label class="block text-gray-700 font-medium">Title</label>
+                    {{ form.title }}
+
+                    <label class="block text-gray-700 font-medium">Description</label>
+                    {{ form.description }}
+
+                    <label class="block text-gray-700 font-medium">Attached File</label>
+                    {{ form.file }}
+
+                    <label class="block text-gray-700 font-medium">Due Date</label>
+                    {{ form.due_date }}
+                </div>
+
                 <div class="flex justify-end space-x-4 mt-6">
-                    <button type="submit" 
+                    <button type="submit"
                             class="bg-custom-purple text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition shadow-md">
                         Save Changes
                     </button>
-                    <a href="{% url 'view_assignment' assignment.id %}" 
-                       class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400 transition shadow-md">
+                    <a href="{% url 'view_assignment' assignment.id %}"
+                    class="bg-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-400 transition shadow-md">
                         Cancel
                     </a>
                 </div>
@@ -24,4 +37,20 @@
         </div>
     </div>
 </div>
+
+<!-- Flatpickr Styles -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+<!-- Flatpickr Script -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+    flatpickr("input[name='due_date']", {
+        enableTime: true,
+        dateFormat: "Y-m-d H:i",
+        minDate: "today",
+        maxDate: new Date().fp_incr(365), // 365 days from now
+        altInput: true,
+        altFormat: "F j, Y (h:i K)"
+    });
+</script>
 {% endblock %}

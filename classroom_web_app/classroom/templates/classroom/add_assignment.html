@@ -25,7 +25,7 @@
 
                 <div class="flex justify-end mt-6">
                     <button type="submit" 
-                            class="bg-gradient-to-r from-custom-purple to-purple-600 text-white px-6 py-3 rounded-lg hover:from-purple-600 hover:to-custom-purple transition-all shadow-md">
+                        class="bg-gradient-to-r from-purple-500 to-purple-700 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-purple-500 transition-all shadow-md">
                         Add Assignment
                     </button>
                 </div>
@@ -33,4 +33,17 @@
         </div>
     </div>
 </div>
+
+<!-- Flatpickr Script -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+    flatpickr("input[name='due_date']", {
+        enableTime: true,
+        dateFormat: "Y-m-d H:i",
+        minDate: "today",
+        maxDate: new Date().fp_incr(365), // 365 days from now
+        altInput: true,
+        altFormat: "F j, Y (h:i K)"
+    });
+</script>
 {% endblock %}

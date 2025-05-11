@@ -113,6 +113,8 @@ def generate_verification_code():
 #------------------------------------------------
 
 def register(request):
+    old_data = {}
+
     if request.method == 'POST':
         username = request.POST['username'].strip()
         email = request.POST['email'].strip()
@@ -120,46 +122,54 @@ def register(request):
         password2 = request.POST['password2']
         captcha_form = CaptchaTestForm(request.POST)
 
+        old_data = {
+            'username': username,
+            'email': email,
+        }
+
         if not captcha_form.is_valid():
             messages.error(request, "Invalid CAPTCHA. Please try again.")
         elif not re.match(r'^[a-zA-Z0-9_]{4,}$', username):
             messages.error(request, "Username must be at least 4 characters and contain only letters, numbers, and underscores.")
+            old_data['username'] = ''
         elif User.objects.filter(username=username).exists():
             messages.error(request, "Username already exists.")
+            old_data['username'] = ''
         elif not re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', email):
             messages.error(request, "Enter a valid email address.")
+            old_data['email'] = ''
         elif User.objects.filter(email=email).exists():
             messages.error(request, "Email is already registered.")
+            old_data['email'] = ''
         elif password1 != password2:
             messages.error(request, "Passwords do not match.")
         elif not is_strong_password(password1):
             messages.error(request, "Password must be strong with all required characters.")
         else:
-            # Save valid form data temporarily in session
             request.session['registration_data'] = {
                 'username': username,
                 'email': email,
                 'password': password1,
             }
 
-            # Generate 6-digit code
-            code = generate_verification_code()
+            # Flag for clearing localStorage
+            request.session['just_registered'] = True
 
-            # Create or update verification code
+            code = generate_verification_code()
             EmailVerificationCode.objects.update_or_create(
                 email=email,
                 defaults={'code': code, 'created_at': timezone.now()}
             )
 
-            # Send improved verification email
             send_verification_email(email, username, code)
-
             return redirect('verify_code')
-
     else:
         captcha_form = CaptchaTestForm()
 
-    return render(request, 'register.html', {'captcha_form': captcha_form})
+    return render(request, 'register.html', {
+        'captcha_form': captcha_form,
+        'old_data': old_data
+    })
 
 #------------------------------------------------------------
 
@@ -186,9 +196,13 @@ def verify_code(request):
         else:
             # Mark as verified in session
             request.session['verified_email'] = True
+            # Clear registration flag for localStorage wipe
+            request.session.pop('just_registered', None)
             return redirect('accept_terms')
 
-    return render(request, 'verify_code.html')
+    return render(request, 'verify_code.html', {
+        'just_registered': request.session.get('just_registered', False)
+    })
 
 #-------------------------------------------------
 

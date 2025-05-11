@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Verify Email - ClassConnect{% endblock %}
 {% block content %}
 <div class="min-h-screen flex items-center justify-center bg-gradient-to-r from-purple-50 to-white p-4">
@@ -42,9 +43,17 @@
             <form method="post" class="space-y-5">
                 {% csrf_token %}
                 <label for="code" class="block text-sm font-medium text-purple-900">Verification Code</label>
-                <input type="text" name="code" id="code" placeholder="Enter code from email" required
-                    class="mt-1 block w-full px-4 py-3 border border-purple-200 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 placeholder-purple-300">
-                
+
+                <!-- Fancy 6-digit input box UI -->
+                <div id="code-container" class="flex justify-center space-x-2 mt-2">
+                    {% for i in "123456" %}
+                        <input type="text" inputmode="numeric" maxlength="1" pattern="\d*" class="code-input w-12 h-14 text-center text-xl border border-purple-300 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all" />
+                    {% endfor %}
+                </div>
+
+                <!-- Hidden real input to collect the full code -->
+                <input type="hidden" name="code" id="code" required>
+
                 <button type="submit"
                     class="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 py-3 rounded-lg hover:from-purple-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 shadow-lg hover:shadow-xl transition-all duration-300 font-medium">
                     Verify & Continue
@@ -59,36 +68,8 @@
         <!-- Right Section - Illustration -->
         <div class="w-full lg:w-1/2 bg-gradient-to-br from-purple-50 to-white p-10 flex flex-col items-center justify-center border-l border-purple-100">
             <div class="max-w-md">
-                <div class="mb-8 transform hover:scale-[1.02] transition-transform duration-500">
-                    <!-- Replace this SVG with a relevant email verification themed illustration -->
-                    <svg viewBox="0 0 500 400" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto">
-                        <!-- Background gradient -->
-                        <rect width="500" height="400" fill="url(#bgGradient)" rx="10" ry="10"/>
-                        <defs>
-                            <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" stop-color="#F5F3FF" />
-                                <stop offset="100%" stop-color="#EDE9FE" />
-                            </linearGradient>
-                        </defs>
-
-                        <!-- Envelope Icon -->
-                        <g>
-                            <rect x="100" y="100" width="300" height="200" rx="20" fill="#8B5CF6" />
-                            <polyline points="100,100 250,220 400,100" fill="#A78BFA" stroke="#7C3AED" stroke-width="4"/>
-                            <text x="250" y="160" text-anchor="middle" font-family="Arial" font-size="24" fill="#F5F3FF" font-weight="bold">EMAIL CODE</text>
-                        </g>
-
-                        <!-- Floating bubbles -->
-                        <circle cx="60" cy="60" r="8" fill="#DDD6FE">
-                            <animate attributeName="cy" values="60;50;60" dur="2s" repeatCount="indefinite"/>
-                        </circle>
-                        <circle cx="440" cy="90" r="10" fill="#C4B5FD">
-                            <animate attributeName="cy" values="90;80;90" dur="3s" repeatCount="indefinite"/>
-                        </circle>
-                        <circle cx="300" cy="360" r="6" fill="#EDE9FE">
-                            <animate attributeName="cy" values="360;350;360" dur="2.5s" repeatCount="indefinite"/>
-                        </circle>
-                    </svg>
+                <div class="mb-8 transform hover:scale-[1.02] transition-transform duration-500 drop-shadow-xl">
+                    <img src="{% static 'users/svg/AuthenticationIllustration.svg' %}" alt="Authentication Illustration" class="w-full h-auto rounded-xl shadow-lg border border-purple-100" />
                 </div>
                 <div class="text-center px-6">
                     <h3 class="text-2xl font-bold text-purple-900 mb-4">Secure Your Identity</h3>
@@ -103,4 +84,40 @@
         </div>
     </div>
 </div>
+
+{% if just_registered %}
+<script>
+  localStorage.removeItem('reg_username');
+  localStorage.removeItem('reg_email');
+</script>
+{% endif %}
+
+<!-- JS for auto-moving and syncing verification code inputs -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const inputs = document.querySelectorAll(".code-input");
+        const hiddenInput = document.getElementById("code");
+
+        inputs[0].focus();
+
+        inputs.forEach((input, idx) => {
+            input.addEventListener("input", () => {
+                if (input.value.length === 1 && idx < inputs.length - 1) {
+                    inputs[idx + 1].focus();
+                }
+                updateHiddenCode();
+            });
+
+            input.addEventListener("keydown", (e) => {
+                if (e.key === "Backspace" && input.value === "" && idx > 0) {
+                    inputs[idx - 1].focus();
+                }
+            });
+        });
+
+        function updateHiddenCode() {
+            hiddenInput.value = Array.from(inputs).map(i => i.value).join('');
+        }
+    });
+</script>
 {% endblock %}

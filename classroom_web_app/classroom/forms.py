@@ -2,6 +2,8 @@ from django import forms
 from .models import Classroom, Announcement, Assignment
 from .models import Quiz, Question, Choice, DiscussionThread, DiscussionMessage
 from django.forms import inlineformset_factory
+from django.utils import timezone
+import datetime
 
 #------------------------------------------------------------
 
@@ -49,11 +51,33 @@ class AssignmentForm(forms.ModelForm):
         model = Assignment
         fields = ['title', 'description', 'file', 'due_date']
         widgets = {
-            'title': forms.TextInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-custom-purple'}),
-            'description': forms.Textarea(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-custom-purple', 'rows': 4}),
-            'file': forms.FileInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-custom-purple'}),
-            'due_date': forms.DateTimeInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-custom-purple', 'type': 'datetime-local'}),
+            'title': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-custom-purple'}),
+            'description': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-custom-purple',
+                'rows': 4}),
+            'file': forms.FileInput(attrs={
+                'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-custom-purple'}),
+            'due_date': forms.TextInput(attrs={  # <-- change to TextInput for JS compatibility
+                'class': 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-custom-purple',
+                'placeholder': 'Select date and time'
+            }),
         }
+
+    def clean_due_date(self):
+        due_date = self.cleaned_data.get('due_date')
+        now = timezone.now()
+
+        if not due_date:
+            raise forms.ValidationError("Please enter a valid due date and time.")
+
+        if due_date <= now:
+            raise forms.ValidationError("Due date must be in the future.")
+
+        if due_date > now + datetime.timedelta(days=365):
+            raise forms.ValidationError("Due date can't be more than 1 year from now.")
+
+        return due_date
 
 #------------------------------------------------------------
 
