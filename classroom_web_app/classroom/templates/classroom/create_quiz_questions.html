@@ -4,38 +4,42 @@
 {% block content %}
 <div class="min-h-screen bg-gradient-to-r from-purple-50 to-white py-10 px-5">
     <div class="max-w-4xl mx-auto">
-        <h1 class="text-4xl font-bold text-custom-purple text-center mb-8">Add {{ quiz_info.number_of_questions }} Questions</h1>
+        <h1 class="text-4xl font-bold text-custom-purple text-center mb-8">Add {{ formset.total_form_count }} Questions</h1>
 
         <div class="bg-white p-8 rounded-xl shadow-lg">
-            <form method="post">
+            <form method="post" id="quizForm">
                 {% csrf_token %}
                 {{ formset.management_form }}
 
                 {% for form in formset %}
-                    <div class="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-lg shadow-sm">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-2">Question {{ forloop.counter }}</h3>
+                    <div class="question-block mb-10 p-6 bg-purple-50 border border-purple-200 rounded-lg shadow-sm">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Question {{ forloop.counter }}</h3>
 
-                        <label class="block text-gray-700 font-medium">Question Text</label>
-                        {{ form.question_text }}
+                        {% if form.non_field_errors %}
+                            <div class="text-red-600 text-sm mb-2">
+                                {% for error in form.non_field_errors %}
+                                    <p>⚠️ {{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
 
-                        <label class="block text-gray-700 font-medium mt-4">Points</label>
-                        {{ form.points }}
+                        <div class="mb-4">
+                            <label class="block text-gray-700 font-medium">Question Text</label>
+                            {{ form.question_text }}
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-gray-700 font-medium">Points</label>
+                            {{ form.points }}
+                        </div>
 
                         <div class="mt-6">
                             <label class="block text-gray-700 font-semibold mb-2">Choices</label>
-                            <div class="space-y-2">
-                                <div>
-                                    {{ form.choice_1 }}
-                                </div>
-                                <div>
-                                    {{ form.choice_2 }}
-                                </div>
-                                <div>
-                                    {{ form.choice_3 }}
-                                </div>
-                                <div>
-                                    {{ form.choice_4 }}
-                                </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>{{ form.choice_1 }}</div>
+                                <div>{{ form.choice_2 }}</div>
+                                <div>{{ form.choice_3 }}</div>
+                                <div>{{ form.choice_4 }}</div>
                             </div>
                         </div>
 
@@ -46,7 +50,12 @@
                     </div>
                 {% endfor %}
 
-                <div class="flex justify-end mt-6">
+                <div class="flex justify-end mt-6 gap-4">
+                    <button type="button" id="previewButton" 
+                        class="bg-white text-purple-700 border border-purple-700 px-6 py-3 rounded-lg hover:bg-purple-100 transition-all shadow-md">
+                        Preview Quiz 👀
+                    </button>
+
                     <button type="submit" 
                         class="bg-gradient-to-r from-purple-500 to-purple-700 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-purple-500 transition-all shadow-md">
                         Create Quiz ✅
@@ -56,4 +65,90 @@
         </div>
     </div>
 </div>
+
+<!-- SweetAlert2 for modal -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+// Function to validate and collect preview data
+function validateAndGeneratePreview() {
+    const questionBlocks = document.querySelectorAll('.question-block');
+    let previewContent = '';
+    let allValid = true;
+
+    for (let i = 0; i < questionBlocks.length; i++) {
+        const block = questionBlocks[i];
+        const index = i;
+
+        const questionInput = block.querySelector(`[name="form-${index}-question_text"]`);
+        const pointsInput = block.querySelector(`[name="form-${index}-points"]`);
+        const choiceInputs = [
+            block.querySelector(`[name="form-${index}-choice_1"]`),
+            block.querySelector(`[name="form-${index}-choice_2"]`),
+            block.querySelector(`[name="form-${index}-choice_3"]`),
+            block.querySelector(`[name="form-${index}-choice_4"]`)
+        ];
+        const correctChoice = block.querySelector(`input[name="form-${index}-correct_choice"]:checked`);
+
+        if (!questionInput.value.trim() || !pointsInput.value || parseInt(pointsInput.value) < 1 || parseInt(pointsInput.value) > 100) {
+            allValid = false;
+            break;
+        }
+
+        for (let j = 0; j < choiceInputs.length; j++) {
+            if (!choiceInputs[j].value.trim()) {
+                allValid = false;
+                break;
+            }
+        }
+
+        if (!correctChoice) {
+            allValid = false;
+            break;
+        }
+
+        // Build preview
+        previewContent += `<div style="text-align:left;"><strong>Question ${i + 1} (${pointsInput.value} pts)</strong><br>`;
+        previewContent += `<em>${questionInput.value}</em><br><ul style="margin-top:5px;">`;
+        choiceInputs.forEach((input, idx) => {
+            const isCorrect = (idx === parseInt(correctChoice.value) - 1) ? '✅' : '';
+            previewContent += `<li>${String.fromCharCode(65 + idx)}. ${input.value} ${isCorrect}</li>`;
+        });
+        previewContent += `</ul></div><hr>`;
+    }
+
+    return {
+        isValid: allValid,
+        html: previewContent
+    };
+}
+
+document.getElementById('previewButton').addEventListener('click', function () {
+    const preview = validateAndGeneratePreview();
+
+    if (!preview.isValid) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Incomplete Form',
+            text: 'Please complete all questions before previewing.'
+        });
+        return;
+    }
+
+    // Show preview modal
+    Swal.fire({
+        title: 'Quiz Preview',
+        html: preview.html,
+        width: '60%',
+        showCancelButton: true,
+        confirmButtonText: 'Submit Quiz ✅',
+        cancelButtonText: 'Edit Again 🛠️'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Submit the form
+            document.getElementById('quizForm').submit();
+        }
+    });
+});
+</script>
 {% endblock %}

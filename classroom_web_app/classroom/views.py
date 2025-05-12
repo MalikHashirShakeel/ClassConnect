@@ -442,43 +442,56 @@ def create_quiz_questions(request, classroom_id):
 
     if request.method == 'POST':
         formset = QuestionFormSet(request.POST)
+        all_filled = True
+
         if formset.is_valid():
-            quiz = Quiz.objects.create(
-                title=quiz_info['title'],
-                description=quiz_info['description'],
-                time_limit_minutes=quiz_info['time_limit_minutes'],
-                start_time=start_time,
-                end_time=start_time + timedelta(minutes=quiz_info['time_limit_minutes']),
-                classroom=classroom,
-                created_by=request.user,
-            )
-
             for question_form in formset:
-                question = question_form.save(commit=False)
-                question.quiz = quiz
-                question.question_type = 'MCQ'
-                question.save()
+                # Check for required fields manually
+                required_fields = ['question_text', 'points', 'choice_1', 'choice_2', 'choice_3', 'choice_4', 'correct_choice']
+                if not question_form.cleaned_data or not all(field in question_form.cleaned_data and question_form.cleaned_data[field] for field in required_fields):
+                    all_filled = False
+                    break
 
-                choices = [
-                    question_form.cleaned_data['choice_1'],
-                    question_form.cleaned_data['choice_2'],
-                    question_form.cleaned_data['choice_3'],
-                    question_form.cleaned_data['choice_4'],
-                ]
-                correct_index = int(question_form.cleaned_data['correct_choice']) - 1
+            if not all_filled:
+                messages.error(request, "All question fields must be filled out. Please complete every question.")
+            else:
+                quiz = Quiz.objects.create(
+                    title=quiz_info['title'],
+                    description=quiz_info['description'],
+                    time_limit_minutes=quiz_info['time_limit_minutes'],
+                    start_time=start_time,
+                    end_time=start_time + timedelta(minutes=quiz_info['time_limit_minutes']),
+                    classroom=classroom,
+                    created_by=request.user,
+                )
 
-                for i, choice_text in enumerate(choices):
-                    Choice.objects.create(
-                        question=question,
-                        choice_text=choice_text,
-                        is_correct=(i == correct_index)
-                    )
+                for question_form in formset:
+                    question = question_form.save(commit=False)
+                    question.quiz = quiz
+                    question.question_type = 'MCQ'
+                    question.save()
 
-            del request.session['quiz_info']
-            messages.success(request, "Quiz created successfully!")
-            return redirect('classroom_detail', classroom_id=classroom_id)
+                    choices = [
+                        question_form.cleaned_data['choice_1'],
+                        question_form.cleaned_data['choice_2'],
+                        question_form.cleaned_data['choice_3'],
+                        question_form.cleaned_data['choice_4'],
+                    ]
+                    correct_index = int(question_form.cleaned_data['correct_choice']) - 1
+
+                    for i, choice_text in enumerate(choices):
+                        Choice.objects.create(
+                            question=question,
+                            choice_text=choice_text,
+                            is_correct=(i == correct_index)
+                        )
+
+                del request.session['quiz_info']
+                messages.success(request, "Quiz created successfully!")
+                return redirect('classroom_detail', classroom_id=classroom_id)
+
         else:
-            messages.error(request, "Please correct the errors below.")
+            messages.error(request, "Please correct the form errors.")
     else:
         formset = QuestionFormSet()
 

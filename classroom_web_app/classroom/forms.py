@@ -1,6 +1,7 @@
 from django import forms
 from .models import Classroom, Announcement, Assignment
 from .models import Quiz, Question, Choice, DiscussionThread, DiscussionMessage
+from django.core.exceptions import ValidationError
 from django.forms import inlineformset_factory
 from django.utils import timezone
 import datetime
@@ -82,11 +83,40 @@ class AssignmentForm(forms.ModelForm):
 #------------------------------------------------------------
 
 class QuizInfoForm(forms.Form):
-    title = forms.CharField(max_length=255)
-    description = forms.CharField(widget=forms.Textarea, required=False)
-    time_limit_minutes = forms.IntegerField(min_value=1, max_value=300)
-    start_time = forms.DateTimeField(widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}))
-    number_of_questions = forms.IntegerField(min_value=1, max_value=50, label="Number of Questions")
+    title = forms.CharField(
+        max_length=255,
+        label="Quiz Title",
+        help_text="Enter a concise and clear quiz title (max 255 characters)."
+    )
+    description = forms.CharField(
+        widget=forms.Textarea(attrs={'rows': 4}),
+        required=False,
+        label="Quiz Description",
+        help_text="(Optional) Describe what the quiz is about."
+    )
+    time_limit_minutes = forms.IntegerField(
+        min_value=1,
+        max_value=300,
+        label="Time Limit (in minutes)",
+        help_text="Set the quiz duration (1 - 300 minutes)."
+    )
+    start_time = forms.DateTimeField(
+        widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+        label="Quiz Start Time",
+        help_text="Select when the quiz will start (future only)."
+    )
+    number_of_questions = forms.IntegerField(
+        min_value=1,
+        max_value=50,
+        label="Number of Questions",
+        help_text="Set how many questions the quiz will have (1 - 50)."
+    )
+
+    def clean_start_time(self):
+        start_time = self.cleaned_data.get('start_time')
+        if start_time < timezone.now():
+            raise ValidationError("Start time must be in the future.")
+        return start_time
 
 #------------------------------------------------------------
 
@@ -101,12 +131,18 @@ class QuizForm(forms.ModelForm):
 #------------------------------------------------------------
 
 class QuestionForm(forms.ModelForm):
-    choice_1 = forms.CharField(label="Option 1", max_length=255)
-    choice_2 = forms.CharField(label="Option 2", max_length=255)
-    choice_3 = forms.CharField(label="Option 3", max_length=255)
-    choice_4 = forms.CharField(label="Option 4", max_length=255)
+    choice_1 = forms.CharField(label="Option 1", max_length=255, required=True)
+    choice_2 = forms.CharField(label="Option 2", max_length=255, required=True)
+    choice_3 = forms.CharField(label="Option 3", max_length=255, required=True)
+    choice_4 = forms.CharField(label="Option 4", max_length=255, required=True)
+
     correct_choice = forms.ChoiceField(
-        choices=[('1', 'Option 1'), ('2', 'Option 2'), ('3', 'Option 3'), ('4', 'Option 4')],
+        choices=[
+            ('1', 'Option 1'),
+            ('2', 'Option 2'),
+            ('3', 'Option 3'),
+            ('4', 'Option 4')
+        ],
         label="Correct Option",
         widget=forms.RadioSelect
     )
@@ -114,6 +150,26 @@ class QuestionForm(forms.ModelForm):
     class Meta:
         model = Question
         fields = ['question_text', 'points']
+        labels = {
+            'question_text': 'Question Text',
+            'points': 'Points (1–100)'
+        }
+        help_texts = {
+            'points': 'Each question can carry 1 to 100 points.'
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        question_text = cleaned_data.get('question_text')
+        points = cleaned_data.get('points')
+
+        if not question_text:
+            raise ValidationError("Question text cannot be empty.")
+
+        if points is not None and (points < 1 or points > 100):
+            raise ValidationError("Points must be between 1 and 100.")
+
+        return cleaned_data
 
 #------------------------------------------------------------
         
