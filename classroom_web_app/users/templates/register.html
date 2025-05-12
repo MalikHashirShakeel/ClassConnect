@@ -4,16 +4,15 @@
 {% block content %}
 <div class="min-h-screen flex items-center justify-center bg-gradient-to-r from-purple-50 to-white p-4">
     <div class="flex flex-col lg:flex-row bg-white shadow-2xl rounded-2xl overflow-hidden w-full max-w-6xl">
-        <!-- Left Section - Registration Form (unchanged) -->
+        <!-- Left Section - Registration Form -->
         <div class="w-full lg:w-1/2 p-10">
             <div class="flex items-center mb-6">
-                <svg class="w-8 h-8 text-custom-purple mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <svg class="w-8 h-8 text-custom-purple mr-2" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v1h8v-1zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-1a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v1h-3zM4.75 12.094A5.973 5.973 0 004 15v1H1v-1a3 3 0 013.75-2.906z"></path>
                 </svg>
                 <h2 class="text-3xl font-bold text-custom-purple">Create Your Account</h2>
             </div>
 
-            <!-- Display error messages -->
             {% if messages %}
             <div class="mb-6 transition-all duration-300">
                 {% for message in messages %}
@@ -27,7 +26,7 @@
             <!-- Security Instructions -->
             <div class="p-4 mb-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border border-purple-100 shadow-sm transition-all hover:shadow-md">
                 <div class="flex items-start">
-                    <svg class="w-5 h-5 text-purple-600 mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <svg class="w-5 h-5 text-purple-600 mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
                     </svg>
                     <div>
@@ -61,22 +60,51 @@
                     value="{{ old_data.email|default_if_none:'' }}"
                     class="mt-1 block w-full px-4 py-3 border border-purple-200 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 placeholder-purple-300">
                 </div>
-                <div class="space-y-1">
+                <div class="space-y-1 relative">
                     <label for="password1" class="block text-sm font-medium text-purple-900">Password</label>
-                    <input type="password" name="password1" id="password1" required
-                        class="mt-1 block w-full px-4 py-3 border border-purple-200 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 placeholder-purple-300">
+                    <div class="relative">
+                        <input type="password" name="password1" id="password1" required
+                            class="mt-1 block w-full px-4 py-3 pr-12 border border-purple-200 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 placeholder-purple-300">
+                        <button type="button" id="togglePassword"
+                            class="absolute inset-y-0 right-3 flex items-center text-xl text-purple-400 hover:text-purple-600 focus:outline-none">
+                            👁️
+                        </button>
+                    </div>
+
+                    <!-- Strength Bar -->
+                    <div class="mt-2 h-2 w-full bg-purple-100 rounded-full overflow-hidden">
+                        <div id="strengthBar" class="h-full transition-all duration-300 bg-red-400 w-0"></div>
+                    </div>
+
+                    <p class="mt-2 text-sm text-purple-700 italic">🧠 Think of a password like your secret spell. Make it strong enough to protect your castle 🏰.</p>
+
+                    <div id="passwordRules" class="mt-2 text-sm space-y-1">
+                        <p class="flex items-center gap-1 text-red-600" data-rule="length"><span>❌</span> At least 8 characters</p>
+                        <p class="flex items-center gap-1 text-red-600" data-rule="uppercase"><span>❌</span> One uppercase letter</p>
+                        <p class="flex items-center gap-1 text-red-600" data-rule="lowercase"><span>❌</span> One lowercase letter</p>
+                        <p class="flex items-center gap-1 text-red-600" data-rule="number"><span>❌</span> One number</p>
+                        <p class="flex items-center gap-1 text-red-600" data-rule="special"><span>❌</span> One special character</p>
+                    </div>
                 </div>
-                <div class="space-y-1">
+                <div class="space-y-1 relative">
                     <label for="password2" class="block text-sm font-medium text-purple-900">Confirm Password</label>
-                    <input type="password" name="password2" id="password2" required
-                        class="mt-1 block w-full px-4 py-3 border border-purple-200 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 placeholder-purple-300">
+                    <div class="relative">
+                        <input type="password" name="password2" id="password2" required
+                            class="mt-1 block w-full px-4 py-3 pr-12 border border-purple-200 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 placeholder-purple-300">
+                        <button type="button" id="togglePassword2"
+                            class="absolute inset-y-0 right-3 flex items-center text-xl text-purple-400 hover:text-purple-600 focus:outline-none">
+                            👁️
+                        </button>
+                    </div>
+                    <p id="matchMessage" class="mt-2 text-sm font-medium text-purple-700"></p>
                 </div>
+
                 <div class="pt-2">
                     {{ captcha_form.captcha }}
                 </div>
                 <div class="pt-4">
-                    <button type="submit"
-                        class="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 py-3 rounded-lg hover:from-purple-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 shadow-lg hover:shadow-xl transition-all duration-300 font-medium">
+                    <button type="submit" disabled
+                        class="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 py-3 rounded-lg hover:from-purple-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 shadow-lg hover:shadow-xl transition-all duration-300 font-medium opacity-50 cursor-not-allowed">
                         Register Now
                     </button>
                 </div>
@@ -88,15 +116,12 @@
             </div>
         </div>
 
-        <!-- Right Section - Premium Illustration & App Info -->
+        <!-- Right Section -->
         <div class="w-full lg:w-1/2 bg-gradient-to-br from-purple-50 to-white p-10 flex flex-col items-center justify-center border-l border-purple-100">
             <div class="max-w-md">
-                <!-- Premium Classroom Signup Illustration -->
                 <div class="mb-8 transform hover:scale-[1.02] transition-transform duration-500 drop-shadow-xl">
                     <img src="{% static 'users/svg/SignupIllustration.svg' %}" alt="Signup Illustration" class="w-full h-auto rounded-xl shadow-lg border border-purple-100" />
                 </div>
-                
-                <!-- App Description -->
                 <div class="text-center px-6">
                     <h3 class="text-2xl font-bold text-purple-900 mb-4">Transform Your Classroom Experience</h3>
                     <p class="text-purple-700 mb-3 leading-relaxed">
@@ -115,26 +140,76 @@
 </div>
 
 <script>
-  // Auto-save username and email as user types
-  const usernameInput = document.getElementById('username');
-  const emailInput = document.getElementById('email');
+  document.addEventListener("DOMContentLoaded", () => {
+    const usernameInput = document.getElementById('username');
+    const emailInput = document.getElementById('email');
+    const password1 = document.getElementById("password1");
+    const password2 = document.getElementById("password2");
+    const togglePassword = document.getElementById("togglePassword");
+    const togglePassword2 = document.getElementById("togglePassword2");
+    const strengthBar = document.getElementById("strengthBar");
+    const matchMessage = document.getElementById("matchMessage");
+    const submitButton = document.querySelector('button[type="submit"]');
 
-  usernameInput.addEventListener('input', () => {
-    localStorage.setItem('reg_username', usernameInput.value);
-  });
+    const rules = {
+      length: /.{8,}/,
+      uppercase: /[A-Z]/,
+      lowercase: /[a-z]/,
+      number: /[0-9]/,
+      special: /[^A-Za-z0-9]/
+    };
 
-  emailInput.addEventListener('input', () => {
-    localStorage.setItem('reg_email', emailInput.value);
-  });
+    // Restore saved inputs
+    if (!usernameInput.value) usernameInput.value = localStorage.getItem('reg_username') || '';
+    if (!emailInput.value) emailInput.value = localStorage.getItem('reg_email') || '';
 
-  // Restore on page load only if not already populated by server
-  window.addEventListener('DOMContentLoaded', () => {
-    if (!usernameInput.value) {
-      usernameInput.value = localStorage.getItem('reg_username') || '';
+    usernameInput.addEventListener('input', () => localStorage.setItem('reg_username', usernameInput.value));
+    emailInput.addEventListener('input', () => localStorage.setItem('reg_email', emailInput.value));
+
+    togglePassword.addEventListener("click", () => {
+      const type = password1.type === "password" ? "text" : "password";
+      password1.type = type;
+      togglePassword.textContent = type === "text" ? "🙈" : "👁️";
+    });
+
+    togglePassword2.addEventListener("click", () => {
+      const type = password2.type === "password" ? "text" : "password";
+      password2.type = type;
+      togglePassword2.textContent = type === "text" ? "🙈" : "👁️";
+    });
+
+    function validateForm() {
+      const val = password1.value;
+      let passed = 0;
+
+      Object.keys(rules).forEach(rule => {
+        const el = document.querySelector(`[data-rule="${rule}"]`);
+        const isValid = rules[rule].test(val);
+        el.classList.toggle("text-green-600", isValid);
+        el.classList.toggle("text-red-600", !isValid);
+        el.children[0].textContent = isValid ? "✅" : "❌";
+        if (isValid) passed++;
+      });
+
+      const percent = (passed / 5) * 100;
+      strengthBar.style.width = percent + "%";
+      strengthBar.className = "h-full transition-all duration-300 " + (
+        percent < 40 ? "bg-red-400" :
+        percent < 80 ? "bg-yellow-400" :
+        "bg-green-500"
+      );
+
+      const match = password1.value === password2.value && password2.value.length > 0;
+      matchMessage.textContent = match ? "✅ Passwords match!" : "❌ Passwords do not match.";
+      matchMessage.className = "mt-2 text-sm font-medium " + (match ? "text-green-600" : "text-red-600");
+
+      submitButton.disabled = !(passed === 5 && match);
+      submitButton.classList.toggle("opacity-50", submitButton.disabled);
+      submitButton.classList.toggle("cursor-not-allowed", submitButton.disabled);
     }
-    if (!emailInput.value) {
-      emailInput.value = localStorage.getItem('reg_email') || '';
-    }
+
+    password1.addEventListener("input", validateForm);
+    password2.addEventListener("input", validateForm);
   });
 </script>
 {% endblock %}

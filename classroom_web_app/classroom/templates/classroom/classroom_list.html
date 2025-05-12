@@ -307,7 +307,13 @@
                 </div>
                 <div>
                     <label for="current_password" class="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
-                    <input type="password" id="current_password" name="current_password" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" required>
+                    <div class="relative">
+                        <input type="password" id="current_password" name="current_password" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" required>
+                        <button type="button" onclick="togglePasswordVisibility('current_password', 'toggleCurrentPassword')" id="toggleCurrentPassword"
+                            class="absolute inset-y-0 right-3 flex items-center text-xl text-gray-400 hover:text-gray-600 focus:outline-none">
+                            👁️
+                        </button>
+                    </div>
                 </div>
                 <div class="pt-2">
                     <button type="submit" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium py-3 px-6 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg">
@@ -339,15 +345,41 @@
                 </div>
                 <div>
                     <label for="new_password1" class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-                    <input type="password" id="new_password1" name="new_password1" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" required>
-                    <p class="text-xs text-gray-500 mt-1">8+ chars with uppercase, lowercase, number, and special character</p>
+                    <div class="relative">
+                        <input type="password" id="new_password1" name="new_password1" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" required>
+                        <button type="button" onclick="togglePasswordVisibility('new_password1', 'toggleNewPassword1')" id="toggleNewPassword1"
+                            class="absolute inset-y-0 right-3 flex items-center text-xl text-gray-400 hover:text-gray-600 focus:outline-none">
+                            👁️
+                        </button>
+                    </div>
+                    
+                    <!-- Strength Bar -->
+                    <div class="mt-2 h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                        <div id="strengthBar" class="h-full transition-all duration-300 bg-red-400 w-0"></div>
+                    </div>
+
+                    <div id="passwordRules" class="mt-2 text-sm space-y-1">
+                        <p class="flex items-center gap-1 text-red-600" data-rule="length"><span>❌</span> At least 8 characters</p>
+                        <p class="flex items-center gap-1 text-red-600" data-rule="uppercase"><span>❌</span> One uppercase letter</p>
+                        <p class="flex items-center gap-1 text-red-600" data-rule="lowercase"><span>❌</span> One lowercase letter</p>
+                        <p class="flex items-center gap-1 text-red-600" data-rule="number"><span>❌</span> One number</p>
+                        <p class="flex items-center gap-1 text-red-600" data-rule="special"><span>❌</span> One special character</p>
+                    </div>
                 </div>
                 <div>
                     <label for="new_password2" class="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
-                    <input type="password" id="new_password2" name="new_password2" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" required>
+                    <div class="relative">
+                        <input type="password" id="new_password2" name="new_password2" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" required>
+                        <button type="button" onclick="togglePasswordVisibility('new_password2', 'toggleNewPassword2')" id="toggleNewPassword2"
+                            class="absolute inset-y-0 right-3 flex items-center text-xl text-gray-400 hover:text-gray-600 focus:outline-none">
+                            👁️
+                        </button>
+                    </div>
+                    <p id="matchMessage" class="mt-2 text-sm font-medium"></p>
                 </div>
                 <div class="pt-2">
-                    <button type="submit" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium py-3 px-6 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg">
+                    <button type="submit" id="updateSubmitBtn" disabled
+                        class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium py-3 px-6 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg opacity-50 cursor-not-allowed">
                         Send Verification Code
                     </button>
                 </div>
@@ -428,6 +460,74 @@
 
     <!-- Credential Change Script -->
     <script>
+        // Password validation rules
+        const rules = {
+            length: /.{8,}/,
+            uppercase: /[A-Z]/,
+            lowercase: /[a-z]/,
+            number: /[0-9]/,
+            special: /[^A-Za-z0-9]/
+        };
+
+        // Toggle password visibility
+        function togglePasswordVisibility(inputId, buttonId) {
+            const input = document.getElementById(inputId);
+            const button = document.getElementById(buttonId);
+            const type = input.type === "password" ? "text" : "password";
+            input.type = type;
+            button.textContent = type === "text" ? "🙈" : "👁️";
+        }
+
+        // Validate password strength and matching
+        function validatePasswordForm() {
+            const val = document.getElementById("new_password1").value;
+            let passed = 0;
+
+            // Check each rule
+            Object.keys(rules).forEach(rule => {
+                const el = document.querySelector(`[data-rule="${rule}"]`);
+                const isValid = rules[rule].test(val);
+                el.classList.toggle("text-green-600", isValid);
+                el.classList.toggle("text-red-600", !isValid);
+                el.children[0].textContent = isValid ? "✅" : "❌";
+                if (isValid) passed++;
+            });
+
+            // Update strength bar
+            const percent = (passed / 5) * 100;
+            const strengthBar = document.getElementById("strengthBar");
+            strengthBar.style.width = percent + "%";
+            strengthBar.className = "h-full transition-all duration-300 " + (
+                percent < 40 ? "bg-red-400" :
+                percent < 80 ? "bg-yellow-400" :
+                "bg-green-500"
+            );
+
+            // Check password match
+            const matchMessage = document.getElementById("matchMessage");
+            const password2 = document.getElementById("new_password2").value;
+            const match = val === password2 && password2.length > 0;
+            matchMessage.textContent = match ? "✅ Passwords match!" : "❌ Passwords do not match.";
+            matchMessage.className = "mt-2 text-sm font-medium " + (match ? "text-green-600" : "text-red-600");
+
+            // Enable/disable submit button
+            const submitButton = document.getElementById("updateSubmitBtn");
+            submitButton.disabled = !(passed === 5 && match);
+            submitButton.classList.toggle("opacity-50", submitButton.disabled);
+            submitButton.classList.toggle("cursor-not-allowed", submitButton.disabled);
+        }
+
+        // Initialize password validation
+        document.addEventListener("DOMContentLoaded", () => {
+            const password1 = document.getElementById("new_password1");
+            const password2 = document.getElementById("new_password2");
+            
+            if (password1 && password2) {
+                password1.addEventListener("input", validatePasswordForm);
+                password2.addEventListener("input", validatePasswordForm);
+            }
+        });
+
         // Handle the floating button click
         document.getElementById('changeCredentialsBtn').addEventListener('click', function() {
             document.getElementById('credentialModals').classList.remove('hidden');
