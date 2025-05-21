@@ -22,10 +22,12 @@ from users.models import EmailVerificationCode
 from django.conf import settings
 from django.http import JsonResponse
 from django.contrib.auth import authenticate
+from django.core.files.base import ContentFile
 import random
 import json
 import csv
 import re
+import io
 
 
 #------------------------------------------------------------
@@ -1169,6 +1171,54 @@ def download_quiz_analytics_pdf(request, quiz_id):
         return redirect('quiz_analytics', quiz_id=quiz.id)
 
     return response
+
+#-------------------------------------------------------------
+
+@login_required
+def share_quiz_results_as_announcement(request, quiz_id):
+    quiz = get_object_or_404(Quiz, id=quiz_id)
+    
+    if request.user != quiz.classroom.created_by:
+        messages.error(request, "You are not authorized to share quiz results.")
+        return redirect('view_quiz', quiz_id=quiz.id)
+    
+    if request.method == 'POST':
+        # Generate CSV in memory
+        csv_buffer = io.StringIO()
+        writer = csv.writer(csv_buffer)
+        writer.writerow(['Student Name', 'Email', 'Marks'])
+        
+        enrolled_students = Enrollment.objects.filter(classroom=quiz.classroom).select_related('student')
+        
+        for enrollment in enrolled_students:
+            student = enrollment.student
+            submission = quiz.submissions.filter(student=student, is_submitted=True).first()
+            score = submission.get_score() if submission else 0
+            writer.writerow([
+                student.get_full_name() or student.username,
+                student.email,
+                score
+            ])
+        
+        # Create announcement with the CSV file
+        csv_file = ContentFile(csv_buffer.getvalue().encode())
+        file_name = f"{quiz.title}_results.csv"
+        
+        announcement = Announcement(
+            title=f"Quiz Results: {quiz.title}",
+            content=f"The results for the quiz '{quiz.title}' are now available. Please find the attached CSV file with all student results.",
+            classroom=quiz.classroom,
+            created_by=request.user
+        )
+        announcement.save()
+        
+        # Attach the CSV file
+        announcement.file.save(file_name, csv_file)
+        
+        messages.success(request, "Quiz results shared as announcement successfully!")
+        return redirect('classroom_detail', classroom_id=quiz.classroom.id)
+    
+    return redirect('view_quiz', quiz_id=quiz.id)
 
 #-------------------------------------------------------------
 

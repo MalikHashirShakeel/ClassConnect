@@ -49,4 +49,5 @@ urlpatterns = [
     path('change-credentials/send-code/', views.send_verification_code, name='send_verification_code'),
     path('change-credentials/verify-code/', views.verify_update_credentials, name='verify_update_credentials'),
     path('change-credentials/resend-code/', views.resend_verification_code, name='resend_verification_code'),
+    path('quiz/<int:quiz_id>/share-results/', views.share_quiz_results_as_announcement, name='share_quiz_results'),
 ]

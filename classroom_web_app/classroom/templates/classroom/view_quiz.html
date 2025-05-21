@@ -41,9 +41,55 @@
                            class="bg-custom-purple text-white px-6 py-3 rounded-full hover:bg-purple-700 shadow-md hover:shadow-xl transition-all">
                             📥 Download Results (CSV)
                         </a>
+                        <button onclick="openShareModal()"
+                           class="bg-teal-500 text-white px-6 py-3 rounded-full hover:bg-teal-600 shadow-md hover:shadow-xl transition-all">
+                            📢 Share as Announcement
+                        </button>
                     {% endif %}
                 </div>
 
+                <!-- Share as Announcement Modal -->
+                <div id="shareModal" class="fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50 hidden">
+                    <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+                        <h3 class="text-2xl font-bold text-custom-purple mb-4">Share Quiz Results</h3>
+                        <p class="text-gray-600 mb-6">This will create an announcement in your classroom with the quiz results CSV attached. Are you sure you want to proceed?</p>
+                        
+                        <div class="flex justify-end space-x-4">
+                            <button onclick="closeShareModal()" class="px-4 py-2 border border-gray-300 rounded-full text-gray-600 hover:bg-gray-100 transition-all">
+                                Cancel
+                            </button>
+                            <form method="post" action="{% url 'share_quiz_results' quiz.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="bg-teal-500 text-white px-6 py-2 rounded-full hover:bg-teal-600 shadow-md transition-all">
+                                    Confirm
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                    function openShareModal() {
+                        const modal = document.getElementById('shareModal');
+                        modal.classList.remove('hidden');
+                        modal.classList.add('flex');
+                    }
+
+                    function closeShareModal() {
+                        const modal = document.getElementById('shareModal');
+                        modal.classList.remove('flex');
+                        modal.classList.add('hidden');
+                    }
+
+                    // Close modal when clicking outside
+                    document.getElementById('shareModal').addEventListener('click', function(e) {
+                        if (e.target === this) {
+                            closeShareModal();
+                        }
+                    });
+                </script>
+
+            <!-- Replace this section in your view_quiz.html -->
             {% else %}
                 <div class="mt-8 text-center">
                     {% if submission and submission.is_submitted %}
@@ -63,24 +109,24 @@
                         </div>
 
                         <a href="{% url 'view_comments' 'quiz' quiz.id %}" 
-                           class="mt-4 inline-block bg-purple-500 text-white px-6 py-3 rounded-full hover:bg-purple-600 shadow-md hover:shadow-xl transition-all">
+                        class="mt-4 inline-block bg-purple-500 text-white px-6 py-3 rounded-full hover:bg-purple-600 shadow-md hover:shadow-xl transition-all">
                             💬 View Comments
                         </a>
 
                     {% elif quiz.is_active %}
                         <!-- Student can take the quiz -->
                         <a href="{% url 'submit_quiz' quiz.id %}" 
-                           class="mt-6 inline-block bg-custom-purple text-white px-6 py-3 rounded-full hover:bg-purple-700 shadow-md hover:shadow-xl transition-all">
+                        class="mt-6 inline-block bg-custom-purple text-white px-6 py-3 rounded-full hover:bg-purple-700 shadow-md hover:shadow-xl transition-all">
                             🚀 Take Quiz
                         </a>
 
-                    {% else %}
+                    {% elif not is_creator %}  <!-- Only show this message to students, not creators -->
                         <!-- Quiz not active -->
                         <div class="bg-red-100 p-4 rounded-lg text-red-600 font-bold shadow-md mb-4">
                             This quiz is not currently active. Submissions are closed.
                         </div>
                         <a href="{% url 'view_comments' 'quiz' quiz.id %}" 
-                           class="mt-4 inline-block bg-purple-500 text-white px-6 py-3 rounded-full hover:bg-purple-600 shadow-md hover:shadow-xl transition-all">
+                        class="mt-4 inline-block bg-purple-500 text-white px-6 py-3 rounded-full hover:bg-purple-600 shadow-md hover:shadow-xl transition-all">
                             💬 View Comments
                         </a>
                     {% endif %}

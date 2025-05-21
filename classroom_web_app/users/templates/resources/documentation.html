@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Documentation - ClassConnect{% endblock %}
+{% block content %}
+<div class="bg-gradient-to-br from-purple-100 to-indigo-100 min-h-screen p-6 animate-fade-in-up">
+    <div class="max-w-5xl mx-auto bg-white shadow-xl rounded-3xl p-10">
+        <h1 class="text-3xl font-bold text-purple-800 mb-4">ClassConnect Documentation</h1>
+        <p class="text-gray-700 mb-6 leading-relaxed">ClassConnect is a DBMS-driven virtual classroom tool designed for seamless communication between students and instructors.</p>
+
+        <div class="space-y-8">
+            <div>
+                <h2 class="text-xl font-semibold text-purple-700">🔐 Authentication</h2>
+                <ul class="list-disc list-inside text-gray-700 text-sm space-y-2 mt-2">
+                    <li>Secure registration with email verification</li>
+                    <li>Password recovery via email</li>
+                    <li>Two-step verification on login</li>
+                </ul>
+            </div>
+
+            <div>
+                <h2 class="text-xl font-semibold text-purple-700">📚 Classroom Management</h2>
+                <ul class="list-disc list-inside text-gray-700 text-sm space-y-2 mt-2">
+                    <li>Create, manage, and delete classrooms</li>
+                    <li>Handle student enrollment and invitations</li>
+                    <li>Announce tasks and view analytics</li>
+                </ul>
+            </div>
+
+            <div>
+                <h2 class="text-xl font-semibold text-purple-700">📝 Assignments & Quizzes</h2>
+                <ul class="list-disc list-inside text-gray-700 text-sm space-y-2 mt-2">
+                    <li>Create assignments with rich descriptions and files</li>
+                    <li>Schedule quizzes, auto-publish, grade, and analyze</li>
+                    <li>CSV export and leaderboard view</li>
+                </ul>
+            </div>
+
+            <div>
+                <h2 class="text-xl font-semibold text-purple-700">💬 Discussion & Notifications</h2>
+                <ul class="list-disc list-inside text-gray-700 text-sm space-y-2 mt-2">
+                    <li>Topic threads with replies and reactions</li>
+                    <li>Instructor pinning and priority tags</li>
+                    <li>Notifications on assignment updates</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
